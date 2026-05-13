@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Slayer: ULTIMATE - Absolute Stability</title>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root { --primary: #3b82f6; --accent: #f59e0b; --danger: #ef4444; --success: #10b981; --dark: #1e293b; --boss: #a855f7; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; }
+        .game-container { max-width: 650px; margin: 10px auto; background: var(--dark); border-radius: 20px; padding: 20px; border: 2px solid #334155; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.5); transition: all 0.3s; }
+        .boss-mode { border-color: var(--boss); box-shadow: 0 0 40px rgba(168, 85, 247, 0.4); }
+        .status-bar { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; }
+        .hp-container { width: 100%; height: 12px; background: #334155; border-radius: 6px; overflow: hidden; margin: 10px 0; }
+        #hp-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #10b981, #3b82f6); transition: width 0.3s; }
+        .timer-container { font-size: 2.2rem; color: var(--accent); text-align: center; font-family: monospace; text-shadow: 0 0 10px rgba(245,158,11,0.3); }
+        .display-area { min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 15px; margin: 15px 0; padding: 25px; border: 1px solid #475569; position: relative; }
+        .combo-badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; display: none; z-index: 10; animation: pop 0.3s ease; }
+        @keyframes pop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
+        .boss-warning { color: var(--boss); font-weight: bold; animation: blink 1s infinite; display: none; margin-bottom: 10px; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+        .btn { padding: 15px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; }
+        .btn-choice { background: #334155; color: white; border: 1px solid #475569; }
+        .btn-choice:hover:not(:disabled) { background: #475569; }
+        .btn-choice.correct { background: var(--success) !important; border-color: var(--success); }
+        .btn-choice.wrong { background: var(--danger) !important; border-color: var(--danger); }
+        .btn-main { background: var(--primary); color: white; width: 100%; margin-top: 15px; }
+        .btn-sub { background: #475569; color: white; width: 100%; margin-top: 10px; font-size: 0.85rem; padding: 10px; }
+        .log-area { background: #000; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.75rem; max-height: 200px; overflow-y: auto; margin-top: 15px; color: #94a3b8; border: 1px solid #334155; }
+        .log-item { margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 4px; line-height: 1.4; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="game-wrap">
+    <div id="screen-menu">
+        <h1 style="text-align:center; color: var(--primary);">Math Slayer: ULTIMATE</h1>
+        <p style="text-align:center; opacity:0.8; font-size: 0.85rem; margin-bottom: 25px;">式の計算＋データの活用</p>
+        <div style="display:grid; gap:12px;">
+            <button class="btn btn-main" onclick="startGame('shiki')">中2：式の計算 ステージ</button>
+            <button class="btn btn-main" onclick="startGame('data')">中1：データの活用 ステージ</button>
+            <button class="btn btn-main" style="background:var(--accent)" onclick="startGame('exam')">全範囲：模擬テスト</button>
+        </div>
+    </div>
+
+    <div id="screen-game" class="hidden">
+        <div class="status-bar"><span>HP</span><span id="score-display">Score: 0</span></div>
+        <div class="hp-container"><div id="hp-fill"></div></div>
+        <div class="timer-container" id="timer">00:30</div>
+        <div class="display-area">
+            <div id="combo" class="combo-badge">0 COMBO!</div>
+            <div id="boss-label" class="boss-warning">⚠️ BOSS WARNING ⚠️</div>
+            <div id="question-text" style="font-size:1.3rem; text-align:center; line-height:2.0;"></div>
+        </div>
+        <div id="choice-area" class="choice-grid"></div>
+        <button id="btn-next" class="btn btn-main hidden" onclick="nextQuestion()">次へ進む (Enter)</button>
+        <button class="btn btn-sub" onclick="location.reload()">ホームに戻る</button>
+    </div>
+
+    <div id="screen-result" class="hidden">
+        <h2 style="text-align:center;" id="result-title">QUEST RESULT</h2>
+        <div style="font-size:3.5rem; text-align:center; margin:10px 0; color:var(--accent);" id="final-score">0</div>
+        <div id="review-log" class="log-area"></div>
+        <button class="btn btn-main" style="margin-top:15px;" onclick="location.reload()">メニューに戻る</button>
+    </div>
+</div>
+
+<script>
+    let state = { hp: 100, score: 0, combo: 0, timeLeft: 30, timer: null, currentQ: null, isLocked: false, correctCount: 0, lastType: -1 };
+
+    function fmt(c, v = "") {
+        if (c === 0) return "";
+        if (c === 1) return v || "1";
+        if (c === -1) return "-" + (v || "1");
+        return c + v;
+    }
+
+    function fmtS(c, v = "") {
+        if (c === 0) return "";
+        let res = fmt(c, v);
+        return (c > 0) ? "+" + res : res;
+    }
+
+    function shuffle(arr) {
+        let a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    function generateChoices(correct, generatorFunc) {
+        let choices = new Set();
+        choices.add(correct);
+        let safety = 0;
+        while(choices.size < 4 && safety < 50) {
+            choices.add(generatorFunc());
+            safety++;
+        }
+        return shuffle(Array.from(choices));
+    }
+
+    const generators = {
+        shiki: (isBoss) => {
+            const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+            if (isBoss) {
+                const d1 = [3, 4][r(0,1)], d2 = [2, 6][r(0,1)];
+                const a1 = r(2,4);
+                const q = `\\( \\frac{${fmt(a1,"a")}-b}{${d1}} - \\frac{a-3b}{${d2}} \\)`;
+                const denom = d1 * d2;
+                const numA = (d2 * a1) - d1;
+                const numB = (-d2) + (3 * d1);
+                const ans = `\\( \\frac{${fmt(numA,"a")}${fmtS(numB,"b")}}{${denom}} \\)`;
+                return { q: q + " を計算せよ", a: ans, c: generateChoices(ans, () => `\\( \\frac{${numA + r(-1,1)}}a${fmtS(numB + r(-1,1),"b")}}{${denom}} \\)`) };
+            }
+            let type;
+            do { type = r(0, 3); } while (type === state.lastType);
+            state.lastType = type;
+            if (type === 0) { 
+                const k1=r(2,4), k2=r(3,5), a1=r(2,3);
+                const ans = `\\( ${fmt(k1*a1-k2*2,"x")}${fmtS(k1*(-1)-k2*5,"y")} \\)`;
+                return { q: `\\( ${k1}(${a1}x-y)-${k2}(2x+5y) \\) を簡潔にせよ`, a: ans, c: generateChoices(ans, () => `\\( ${fmt(r(-10,10),"x")}${fmtS(r(-15,5),"y")} \\)`) };
+            } else if (type === 1) { 
+                const a = r(2, 4);
+                const ans = `\\( ${fmt(-(a*a*a),"a^3")} \\)`;
+                return { q: `\\( (-${fmt(a,"a")})^3 \\div 1 \\)`, a: ans, c: generateChoices(ans, () => `\\( ${fmt(r(-30,30),"a^3")} \\)`) };
+            } else if (type === 2) { 
+                const k = [4, 6, 8][r(0,2)];
+                const ans = `\\( ${fmt(2,"a^2")}${fmtS(-4,"a")} \\)`;
+                return { q: `\\( (${fmt(-k,"a^2")}${fmtS(k*2,"a")}) \\times (-\\frac{1}{${k/2}}) \\)`, a: ans, c: generateChoices(ans, () => `\\( ${fmt(r(-5,5),"a^2")}${fmtS(r(-5,5),"a")} \\)`) };
+            } else { 
+                const deg = r(2, 5);
+                const l = ["x^2", "x^2y", "x^3y", "x^3y^2"][deg-2];
+                const ans = `${deg}次式`;
+                return { q: `\\( -2x+3${l} \\) は何次式か？`, a: ans, c: ["2次式", "3次式", "4次式", "5次式"] };
+            }
+        },
+        data: (isBoss) => {
+            const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+            let type;
+            do { type = r(0, 4); } while (type === state.lastType && !isBoss);
+            state.lastType = type;
+
+            if (isBoss) {
+                const n = [20, 25, 40, 50][r(0,3)];
+                const avg = r(15, 35);
+                const sum = n * avg;
+                const ans = avg.toString();
+                return { q: `全体の度数が ${n}、(階級値×度数)の総和が ${sum} のとき、平均値を求めよ`, a: ans, c: generateChoices(ans, () => (avg + r(-3,3)).toString()) };
+            }
+
+            if (type === 0) { 
+                const total = [20, 25, 40, 50, 100][r(0,4)];
+                const freq = r(2, total/2);
+                const ans = (freq/total).toFixed(2);
+                return { q: `度数合計 ${total} 人、特定の階級の度数が ${freq} 人のとき、相対度数を求めよ`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
+            } else if (type === 1) { 
+                const a=r(2,5), b=r(3,8), c=r(1,4);
+                const ans = (a+b+c).toString();
+                return { q: `第1階級:${a}人、第2階級:${b}人、第3階級:${c}人のとき、第3階級までの累積度数は？`, a: ans, c: generateChoices(ans, () => (a+b+c+r(-2,2)).toString()) };
+            } else if (type === 2) { 
+                const total = r(50, 150);
+                const hit = r(10, 40);
+                const ans = (hit/total).toFixed(2);
+                return { q: `過去 ${total} 日間のうち ${hit} 日が晴れだった。明日晴れる確率(相対度数)を求めよ`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
+            } else if (type === 3) { 
+                const start = r(10, 30);
+                const width = [2, 5, 10][r(0,2)];
+                const ans = width.toString() + "kg";
+                return { q: `階級が ${start}kg以上${start+width}kg未満 のとき、階級の幅を求めよ`, a: ans, c: generateChoices(ans, () => (r(2,15)).toString() + "kg") };
+            } else { 
+                const pool = [
+                    {q:"各階級の真ん中の値を何というか？",a:"階級値"},
+                    {q:"最初の階級からその階級までの度数の合計を何というか？",a:"累積度数"},
+                    {q:"度数が最も大きい階級の階級値を何というか？",a:"最頻値"}
+                ];
+                const p = pool[r(0,2)];
+                return { q: p.q, a: p.a, c: ["階級値", "累積度数", "最頻値", "相対度数"] };
+            }
+        }
+    };
+
+    function startGame(mode) {
+        state.mode = mode; state.score = 0; state.hp = 100; state.combo = 0; state.timeLeft = 30; state.correctCount = 0;
+        document.getElementById('screen-menu').classList.add('hidden');
+        document.getElementById('screen-game').classList.remove('hidden');
+        document.getElementById('hp-fill').style.width = "100%";
+        document.getElementById('score-display').innerText = "Score: 0";
+        document.getElementById('review-log').innerHTML = "";
+        if(state.timer) clearInterval(state.timer);
+        state.timer = setInterval(tick, 1000);
+        nextQuestion();
+    }
+
+    function tick() {
+        state.timeLeft--;
+        if (state.timeLeft < 0) state.timeLeft = 0;
+        document.getElementById('timer').innerText = `00:${state.timeLeft.toString().padStart(2,'0')}`;
+        if (state.timeLeft <= 0) endGame("TIME UP!");
+    }
+
+    function nextQuestion() {
+        state.isLocked = false;
+        state.isBoss = (state.correctCount > 0 && state.correctCount % 5 === 0);
+        const wrap = document.getElementById('game-wrap');
+        const bl = document.getElementById('boss-label');
+        if (state.isBoss) { wrap.classList.add('boss-mode'); bl.style.display='block'; }
+        else { wrap.classList.remove('boss-mode'); bl.style.display='none'; }
+        const m = state.mode === 'exam' ? (Math.random() > 0.5 ? 'shiki' : 'data') : state.mode;
+        state.currentQ = generators[m](state.isBoss);
+        document.getElementById('question-text').innerHTML = state.currentQ.q;
+        document.getElementById('btn-next').classList.add('hidden');
+        const area = document.getElementById('choice-area');
+        area.innerHTML = '';
+        state.currentQ.c.forEach(text => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-choice';
+            btn.innerHTML = text;
+            btn.onclick = () => checkAnswer(btn, text);
+            area.appendChild(btn);
+        });
+        MathJax.typesetPromise();
+    }
+
+    function checkAnswer(btn, selected) {
+        if (state.isLocked) return;
+        state.isLocked = true;
+        const isCorrect = (selected === state.currentQ.a);
+        if (isCorrect) {
+            btn.classList.add('correct');
+            state.combo++; state.correctCount++;
+            state.score += (state.isBoss ? 1000 : 200) + (state.combo * 50);
+            state.timeLeft += 5; 
+        } else {
+            btn.classList.add('wrong'); state.combo = 0; state.hp -= (state.isBoss ? 40 : 25);
+            state.timeLeft -= 5; if (state.timeLeft < 0) state.timeLeft = 0;
+            updateHP();
+            Array.from(document.getElementsByClassName('btn-choice')).forEach(b => {
+                if(b.innerHTML === state.currentQ.a) b.classList.add('correct');
+            });
+        }
+        document.getElementById('timer').innerText = `00:${state.timeLeft.toString().padStart(2,'0')}`;
+        document.getElementById('score-display').innerText = `Score: ${state.score}`;
+        const cb = document.getElementById('combo');
+        if (state.combo > 1) { cb.innerText = `${state.combo} COMBO!`; cb.style.display = 'block'; } else cb.style.display = 'none';
+        
+        const logItem = document.createElement('div');
+        logItem.className = 'log-item';
+        logItem.style.color = isCorrect ? 'var(--success)' : 'var(--danger)';
+        logItem.innerHTML = `${isCorrect ? '◯' : '×'} ${state.currentQ.q} → ${state.currentQ.a}`;
+        document.getElementById('review-log').prepend(logItem);
+
+        if (state.hp <= 0 || state.timeLeft <= 0) {
+            setTimeout(() => endGame(state.hp <= 0 ? "GAME OVER" : "TIME UP!"), 600);
+        } else {
+            document.getElementById('btn-next').classList.remove('hidden');
+        }
+    }
+
+    function updateHP() { document.getElementById('hp-fill').style.width = state.hp + "%"; }
+    function endGame(title) {
+        clearInterval(state.timer);
+        document.getElementById('screen-game').classList.add('hidden');
+        document.getElementById('screen-result').classList.remove('hidden');
+        document.getElementById('result-title').innerText = title;
+        document.getElementById('final-score').innerText = state.score;
+        MathJax.typesetPromise([document.getElementById('review-log')]);
+    }
+</script>
+</body>
+</html>
