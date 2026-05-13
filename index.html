@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Slayer: ULTIMATE - Final Battle Fixed</title>
+    <title>Math Slayer: ULTIMATE - Final Battle Special</title>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         :root { --primary: #3b82f6; --accent: #f59e0b; --danger: #ef4444; --success: #10b981; --dark: #1e293b; --boss: #a855f7; --final: #f43f5e; }
@@ -38,7 +38,7 @@
 <div class="game-container" id="game-wrap">
     <div id="screen-menu">
         <h1 style="text-align:center; color: var(--primary);">Math Slayer: ULTIMATE</h1>
-        <p style="text-align:center; opacity:0.8; font-size: 0.85rem; margin-bottom: 25px;">最終決戦バグ修正・安定性極大版</p>
+        <p style="text-align:center; opacity:0.8; font-size: 0.85rem; margin-bottom: 25px;">最終決戦：正解時+30秒Ver.</p>
         <div style="display:grid; gap:12px;">
             <button class="btn btn-main" onclick="startGame('shiki')">中2：式の計算</button>
             <button class="btn btn-main" onclick="startGame('data')">中1：データの活用</button>
@@ -98,7 +98,6 @@
         return a;
     }
 
-    // 鉄壁の選択肢生成ロジック
     function generateChoices(correct, generatorFunc) {
         let choices = new Set();
         choices.add(correct);
@@ -109,10 +108,10 @@
                 if (dummy && typeof dummy === 'string' && dummy.length > 0) {
                     choices.add(dummy);
                 }
-            } catch(e) { /* ignore error */ }
+            } catch(e) { }
             safety++;
         }
-        const fallback = ["0", "1", "x", "a+b", "\\( a-b \\)"];
+        const fallback = ["0", "1", "x", "a+b"];
         for(let f of fallback) { if(choices.size < 4) choices.add(f); }
         return shuffle(Array.from(choices));
     }
@@ -120,7 +119,6 @@
     const generators = {
         shiki: (isBoss) => {
             const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-            // 最終決戦またはボス：分数の通分
             if (isBoss || state.mode === 'final') {
                 const d1 = [3, 4, 5][r(0,2)], d2 = [2, 6][r(0,1)];
                 const a1 = r(2,4), b1 = r(1,2);
@@ -136,7 +134,6 @@
                     return `\\( \\frac{${fmt(errA,"a")}${fmtS(errB,"b")}}{${denom}} \\)`;
                 })};
             }
-            // 通常問題
             let type = r(0, 2);
             if (type === 0) { 
                 const k1=r(2,4), k2=r(3,5), a1=r(2,3);
@@ -166,7 +163,7 @@
                 const total = [20, 25, 50][r(0,2)];
                 const freq = r(2, total/2);
                 const ans = (freq/total).toFixed(2);
-                return { q: `度数合計 ${total}、特定の階級の度数が ${freq} のとき、相対度数は？`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
+                return { q: `度数合計 ${total}、ある階級の度数が ${freq} のとき、相対度数は？`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
             } else if (type === 1) { 
                 const a=r(5,15), b=r(10,20);
                 const ans = (a+b).toString();
@@ -213,8 +210,7 @@
         state.isLocked = false;
         state.isBoss = (state.correctCount > 0 && state.correctCount % 5 === 0);
         const bl = document.getElementById('boss-label');
-        if (state.isBoss) { bl.style.display='block'; }
-        else { bl.style.display='none'; }
+        bl.style.display = state.isBoss ? 'block' : 'none';
         const m = (state.mode === 'final' || state.mode === 'exam') ? (Math.random() > 0.5 ? 'shiki' : 'data') : state.mode;
         state.currentQ = generators[m](state.isBoss);
         document.getElementById('question-text').classList.remove('hidden');
@@ -231,12 +227,10 @@
         document.getElementById('memory-hint').classList.add('hidden');
         document.getElementById('btn-show-choices').classList.add('hidden');
         const area = document.getElementById('choice-area');
-        area.innerHTML = '';
-        area.classList.remove('hidden');
+        area.innerHTML = ''; area.classList.remove('hidden');
         state.currentQ.c.forEach(text => {
             const btn = document.createElement('button');
-            btn.className = 'btn btn-choice';
-            btn.innerHTML = text;
+            btn.className = 'btn btn-choice'; btn.innerHTML = text;
             btn.onclick = () => checkAnswer(btn, text);
             area.appendChild(btn);
         });
@@ -252,7 +246,8 @@
             btn.classList.add('correct');
             state.combo++; state.correctCount++;
             state.score += (state.isBoss ? 1000 : 200) + (state.combo * 50);
-            state.timeLeft += 5; 
+            // 最終決戦のみ30秒回復、それ以外は5秒
+            state.timeLeft += (state.mode === 'final' ? 30 : 5); 
         } else {
             btn.classList.add('wrong'); state.combo = 0; state.hp -= (state.isBoss ? 40 : 25);
             state.timeLeft -= 5; if (state.timeLeft < 0) state.timeLeft = 0;
@@ -264,12 +259,15 @@
         updateTimerDisplay();
         document.getElementById('score-display').innerText = `Score: ${state.score}`;
         const cb = document.getElementById('combo');
-        if (state.combo > 1) { cb.innerText = `${state.combo} COMBO!`; cb.style.display = 'block'; } else cb.style.display = 'none';
+        cb.innerText = `${state.combo} COMBO!`;
+        cb.style.display = state.combo > 1 ? 'block' : 'none';
+        
         const logItem = document.createElement('div');
         logItem.className = 'log-item';
         logItem.style.color = isCorrect ? 'var(--success)' : 'var(--danger)';
         logItem.innerHTML = `${isCorrect ? '◯' : '×'} ${state.currentQ.q} → 正解: ${state.currentQ.a}`;
         document.getElementById('review-log').prepend(logItem);
+
         if (state.hp <= 0 || state.timeLeft <= 0) {
             setTimeout(() => endGame(state.hp <= 0 ? "GAME OVER" : "TIME UP!"), 600);
         } else {
