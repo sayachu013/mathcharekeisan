@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Slayer: ULTIMATE - Final Stable Fixed</title>
+    <title>Math Slayer: ULTIMATE - Final Battle Fixed</title>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
-        :root { --primary: #3b82f6; --accent: #f59e0b; --danger: #ef4444; --success: #10b981; --dark: #1e293b; --boss: #a855f7; }
+        :root { --primary: #3b82f6; --accent: #f59e0b; --danger: #ef4444; --success: #10b981; --dark: #1e293b; --boss: #a855f7; --final: #f43f5e; }
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; }
         .game-container { max-width: 650px; margin: 10px auto; background: var(--dark); border-radius: 20px; padding: 20px; border: 2px solid #334155; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.5); transition: all 0.3s; }
         .boss-mode { border-color: var(--boss); box-shadow: 0 0 40px rgba(168, 85, 247, 0.4); }
+        .final-mode { border-color: var(--final); box-shadow: 0 0 60px rgba(244, 63, 94, 0.5); }
         .status-bar { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; }
         .hp-container { width: 100%; height: 12px; background: #334155; border-radius: 6px; overflow: hidden; margin: 10px 0; }
         #hp-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #10b981, #3b82f6); transition: width 0.3s; }
@@ -37,11 +38,12 @@
 <div class="game-container" id="game-wrap">
     <div id="screen-menu">
         <h1 style="text-align:center; color: var(--primary);">Math Slayer: ULTIMATE</h1>
-        <p style="text-align:center; opacity:0.8; font-size: 0.85rem; margin-bottom: 25px;">完全動的生成・ボス戦バグ修正済</p>
+        <p style="text-align:center; opacity:0.8; font-size: 0.85rem; margin-bottom: 25px;">最終決戦バグ修正・安定性極大版</p>
         <div style="display:grid; gap:12px;">
-            <button class="btn btn-main" onclick="startGame('shiki')">中2：式の計算 ステージ</button>
-            <button class="btn btn-main" onclick="startGame('data')">中1：データの活用 ステージ</button>
+            <button class="btn btn-main" onclick="startGame('shiki')">中2：式の計算</button>
+            <button class="btn btn-main" onclick="startGame('data')">中1：データの活用</button>
             <button class="btn btn-main" style="background:var(--accent)" onclick="startGame('exam')">全範囲：模擬テスト</button>
+            <button class="btn btn-main" style="background:var(--final); border: 2px solid white;" onclick="startGame('final')">🔥 最終決戦 (高難度・3分) 🔥</button>
         </div>
     </div>
 
@@ -96,18 +98,21 @@
         return a;
     }
 
-    // 選択肢生成のコアロジック
+    // 鉄壁の選択肢生成ロジック
     function generateChoices(correct, generatorFunc) {
         let choices = new Set();
         choices.add(correct);
         let safety = 0;
         while(choices.size < 4 && safety < 100) {
-            let dummy = generatorFunc();
-            if (dummy && dummy !== "undefined") choices.add(dummy);
+            try {
+                let dummy = generatorFunc();
+                if (dummy && typeof dummy === 'string' && dummy.length > 0) {
+                    choices.add(dummy);
+                }
+            } catch(e) { /* ignore error */ }
             safety++;
         }
-        // 万が一のためのフォールバック
-        const fallback = ["0", "1", "x", "a+b"];
+        const fallback = ["0", "1", "x", "a+b", "\\( a-b \\)"];
         for(let f of fallback) { if(choices.size < 4) choices.add(f); }
         return shuffle(Array.from(choices));
     }
@@ -115,30 +120,24 @@
     const generators = {
         shiki: (isBoss) => {
             const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-            if (isBoss) {
-                const d1 = [3, 4][r(0,1)], d2 = [2, 6][r(0,1)];
-                const a1 = r(2,4);
-                const qTex = `\\( \\frac{${fmt(a1,"a")}-b}{${d1}} - \\frac{a-3b}{${d2}} \\)`;
+            // 最終決戦またはボス：分数の通分
+            if (isBoss || state.mode === 'final') {
+                const d1 = [3, 4, 5][r(0,2)], d2 = [2, 6][r(0,1)];
+                const a1 = r(2,4), b1 = r(1,2);
+                const a2 = r(1,2), b2 = r(2,3);
+                const qTex = `\\( \\frac{${fmt(a1,"a")}${fmtS(-b1,"b")}}{${d1}} - \\frac{${fmt(a2,"a")}${fmtS(-b2,"b")}}{${d2}} \\)`;
                 const denom = d1 * d2;
-                const numA = (d2 * a1) - d1;
-                const numB = (-d2) + (3 * d1);
+                const numA = (d2 * a1) - (d1 * a2);
+                const numB = (d2 * -b1) - (d1 * -b2);
                 const ans = `\\( \\frac{${fmt(numA,"a")}${fmtS(numB,"b")}}{${denom}} \\)`;
-                
-                return { 
-                    q: qTex + " を計算せよ", 
-                    a: ans, 
-                    c: generateChoices(ans, () => {
-                        const errA = numA + r(-1, 1);
-                        const errB = numB + r(-1, 1);
-                        return `\\( \\frac{${fmt(errA,"a")}${fmtS(errB,"b")}}{${denom}} \\)`;
-                    }) 
-                };
+                return { q: qTex + " を計算せよ", a: ans, c: generateChoices(ans, () => {
+                    const errA = numA + r(-1, 1);
+                    const errB = numB + r(-1, 1);
+                    return `\\( \\frac{${fmt(errA,"a")}${fmtS(errB,"b")}}{${denom}} \\)`;
+                })};
             }
-            
-            let type;
-            do { type = r(0, 3); } while (type === state.lastType);
-            state.lastType = type;
-
+            // 通常問題
+            let type = r(0, 2);
             if (type === 0) { 
                 const k1=r(2,4), k2=r(3,5), a1=r(2,3);
                 const ans = `\\( ${fmt(k1*a1-k2*2,"x")}${fmtS(k1*(-1)-k2*5,"y")} \\)`;
@@ -147,55 +146,47 @@
                 const a = r(2, 4);
                 const ans = `\\( ${fmt(-(a*a*a),"a^3")} \\)`;
                 return { q: `\\( (-${fmt(a,"a")})^3 \\) を計算せよ`, a: ans, c: generateChoices(ans, () => `\\( ${fmt(r(-30,30),"a^3")} \\)`) };
-            } else if (type === 2) { 
+            } else { 
                 const k1 = r(2, 6), k2 = r(2, 4);
                 const ans = `\\( ${fmt(k1*k2,"xy")} \\)`;
                 return { q: `\\( ${fmt(k1,"x")} \\times ${fmt(k2,"y")} \\) を計算せよ`, a: ans, c: generateChoices(ans, () => `\\( ${fmt(r(2,24),"xy")} \\)`) };
-            } else { 
-                const deg = r(2, 5);
-                const l = ["x^2", "x^2y", "x^3y", "x^3y^2"][deg-2];
-                const ans = `${deg}次式`;
-                return { q: `\\( -2x+3${l} \\) は何次式か？`, a: ans, c: shuffle(["2次式", "3次式", "4次式", "5次式"]) };
             }
         },
         data: (isBoss) => {
             const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-            let type;
-            if (isBoss) {
-                const n = [20, 25, 40, 50][r(0,3)];
-                const avg = r(15, 35);
+            if (isBoss || state.mode === 'final') {
+                const n = [25, 40, 50, 100][r(0,3)];
+                const avg = r(15, 40);
                 const sum = n * avg;
                 const ans = avg.toString();
-                return { q: `度数 ${n}、(階級値×度数)の総和が ${sum} のとき、平均値を求めよ`, a: ans, c: generateChoices(ans, () => (avg + r(-3,3)).toString()) };
+                return { q: `度数合計 ${n}、(階級値×度数)の総和が ${sum} のとき、平均値を求めよ`, a: ans, c: generateChoices(ans, () => (avg + r(-3,3)).toString()) };
             }
-            do { type = r(0, 3); } while (type === state.lastType);
-            state.lastType = type;
+            let type = r(0, 2);
             if (type === 0) { 
-                const total = [20, 25, 40, 50, 100][r(0,4)];
+                const total = [20, 25, 50][r(0,2)];
                 const freq = r(2, total/2);
                 const ans = (freq/total).toFixed(2);
-                return { q: `度数合計 ${total}、ある階級が ${freq} のとき、相対度数は？`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
+                return { q: `度数合計 ${total}、特定の階級の度数が ${freq} のとき、相対度数は？`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
             } else if (type === 1) { 
-                const width = [2, 5, 10][r(0,2)];
-                const ans = width.toString() + "kg";
-                return { q: `階級が 10kg以上${10+width}kg未満 のとき、階級の幅を求めよ`, a: ans, c: generateChoices(ans, () => r(2,15).toString() + "kg") };
-            } else if (type === 2) { 
+                const a=r(5,15), b=r(10,20);
+                const ans = (a+b).toString();
+                return { q: `第1階級:${a}、第2階級:${b}のとき、第2階級までの累積度数は？`, a: ans, c: generateChoices(ans, () => (a+b+r(-2,2)).toString()) };
+            } else {
                 const pool = [{q:"各階級の中央の値",a:"階級値"},{q:"累積した度数の合計",a:"累積度数"},{q:"最も度数が多い階級値",a:"最頻値"}];
                 const p = pool[r(0,2)];
                 return { q: p.q + " とは何か？", a: p.a, c: shuffle(["階級値", "累積度数", "最頻値", "相対度数"]) };
-            } else {
-                const total = r(50, 150);
-                const hit = r(10, 40);
-                const ans = (hit/total).toFixed(2);
-                return { q: `${total}回中 ${hit}回成功した。この相対度数を求めよ`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
             }
         }
     };
 
     function startGame(mode) {
-        state.mode = mode; state.score = 0; state.hp = 100; state.combo = 0; state.timeLeft = 60; state.correctCount = 0;
+        state.mode = mode; state.score = 0; state.hp = 100; state.combo = 0; state.correctCount = 0;
+        state.timeLeft = (mode === 'final' ? 180 : 60);
         document.getElementById('screen-menu').classList.add('hidden');
         document.getElementById('screen-game').classList.remove('hidden');
+        const wrap = document.getElementById('game-wrap');
+        if (mode === 'final') wrap.classList.add('final-mode');
+        else wrap.classList.remove('final-mode');
         document.getElementById('hp-fill').style.width = "100%";
         document.getElementById('score-display').innerText = "Score: 0";
         document.getElementById('review-log').innerHTML = "";
@@ -221,19 +212,16 @@
     function nextQuestion() {
         state.isLocked = false;
         state.isBoss = (state.correctCount > 0 && state.correctCount % 5 === 0);
-        const wrap = document.getElementById('game-wrap');
         const bl = document.getElementById('boss-label');
-        if (state.isBoss) { wrap.classList.add('boss-mode'); bl.style.display='block'; }
-        else { wrap.classList.remove('boss-mode'); bl.style.display='none'; }
-        const m = state.mode === 'exam' ? (Math.random() > 0.5 ? 'shiki' : 'data') : state.mode;
+        if (state.isBoss) { bl.style.display='block'; }
+        else { bl.style.display='none'; }
+        const m = (state.mode === 'final' || state.mode === 'exam') ? (Math.random() > 0.5 ? 'shiki' : 'data') : state.mode;
         state.currentQ = generators[m](state.isBoss);
-        
         document.getElementById('question-text').classList.remove('hidden');
         document.getElementById('memory-hint').classList.remove('hidden');
         document.getElementById('btn-show-choices').classList.remove('hidden');
         document.getElementById('choice-area').classList.add('hidden');
         document.getElementById('btn-next').classList.add('hidden');
-        
         document.getElementById('question-text').innerHTML = state.currentQ.q;
         MathJax.typesetPromise();
     }
