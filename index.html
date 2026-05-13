@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Slayer: ULTIMATE - Memory Mode</title>
+    <title>Math Slayer: ULTIMATE - Final Stable Fixed</title>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         :root { --primary: #3b82f6; --accent: #f59e0b; --danger: #ef4444; --success: #10b981; --dark: #1e293b; --boss: #a855f7; }
@@ -37,7 +37,7 @@
 <div class="game-container" id="game-wrap">
     <div id="screen-menu">
         <h1 style="text-align:center; color: var(--primary);">Math Slayer: ULTIMATE</h1>
-        <p style="text-align:center; opacity:0.8; font-size: 0.85rem; margin-bottom: 25px;">完全動的生成・暗記回避モード搭載</p>
+        <p style="text-align:center; opacity:0.8; font-size: 0.85rem; margin-bottom: 25px;">完全動的生成・ボス戦バグ修正済</p>
         <div style="display:grid; gap:12px;">
             <button class="btn btn-main" onclick="startGame('shiki')">中2：式の計算 ステージ</button>
             <button class="btn btn-main" onclick="startGame('data')">中1：データの活用 ステージ</button>
@@ -96,16 +96,18 @@
         return a;
     }
 
+    // 選択肢生成のコアロジック
     function generateChoices(correct, generatorFunc) {
         let choices = new Set();
         choices.add(correct);
         let safety = 0;
-        while(choices.size < 4 && safety < 200) {
+        while(choices.size < 4 && safety < 100) {
             let dummy = generatorFunc();
-            if (dummy && dummy !== "") choices.add(dummy);
+            if (dummy && dummy !== "undefined") choices.add(dummy);
             safety++;
         }
-        const fallback = ["0", "1", "-1", "x"];
+        // 万が一のためのフォールバック
+        const fallback = ["0", "1", "x", "a+b"];
         for(let f of fallback) { if(choices.size < 4) choices.add(f); }
         return shuffle(Array.from(choices));
     }
@@ -116,20 +118,31 @@
             if (isBoss) {
                 const d1 = [3, 4][r(0,1)], d2 = [2, 6][r(0,1)];
                 const a1 = r(2,4);
-                const q = `\\( \\frac{${fmt(a1,"a")}-b}{${d1}} - \\frac{a-3b}{${d2}} \\)`;
+                const qTex = `\\( \\frac{${fmt(a1,"a")}-b}{${d1}} - \\frac{a-3b}{${d2}} \\)`;
                 const denom = d1 * d2;
                 const numA = (d2 * a1) - d1;
                 const numB = (-d2) + (3 * d1);
                 const ans = `\\( \\frac{${fmt(numA,"a")}${fmtS(numB,"b")}}{${denom}} \\)`;
-                return { q: q + " を計算せよ", a: ans, c: generateChoices(ans, () => `\\( \\frac{${numA + r(-1,1)}}a${fmtS(numB + r(-1,1),"b")}}{${denom}} \\)`) };
+                
+                return { 
+                    q: qTex + " を計算せよ", 
+                    a: ans, 
+                    c: generateChoices(ans, () => {
+                        const errA = numA + r(-1, 1);
+                        const errB = numB + r(-1, 1);
+                        return `\\( \\frac{${fmt(errA,"a")}${fmtS(errB,"b")}}{${denom}} \\)`;
+                    }) 
+                };
             }
+            
             let type;
             do { type = r(0, 3); } while (type === state.lastType);
             state.lastType = type;
+
             if (type === 0) { 
                 const k1=r(2,4), k2=r(3,5), a1=r(2,3);
                 const ans = `\\( ${fmt(k1*a1-k2*2,"x")}${fmtS(k1*(-1)-k2*5,"y")} \\)`;
-                return { q: `\\( ${k1}(${a1}x-y)-${k2}(2x+5y) \\) を簡潔にせよ`, a: ans, c: generateChoices(ans, () => `\\( ${fmt(r(-10,10),"x")}${fmtS(r(-15,5),"y")} \\)`) };
+                return { q: `\\( ${k1}(${a1}x-y)-${k2}(2x+5y) \\) を簡潔にせよ`, a: ans, c: generateChoices(ans, () => `\\( ${fmt(r(-10,10),"x")}${fmtS(r(-15,15),"y")} \\)`) };
             } else if (type === 1) { 
                 const a = r(2, 4);
                 const ans = `\\( ${fmt(-(a*a*a),"a^3")} \\)`;
@@ -142,14 +155,12 @@
                 const deg = r(2, 5);
                 const l = ["x^2", "x^2y", "x^3y", "x^3y^2"][deg-2];
                 const ans = `${deg}次式`;
-                return { q: `\\( -2x+3${l} \\) は何次式か？`, a: ans, c: ["2次式", "3次式", "4次式", "5次式"] };
+                return { q: `\\( -2x+3${l} \\) は何次式か？`, a: ans, c: shuffle(["2次式", "3次式", "4次式", "5次式"]) };
             }
         },
         data: (isBoss) => {
             const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
             let type;
-            do { type = r(0, 4); } while (type === state.lastType && !isBoss);
-            state.lastType = type;
             if (isBoss) {
                 const n = [20, 25, 40, 50][r(0,3)];
                 const avg = r(15, 35);
@@ -157,29 +168,26 @@
                 const ans = avg.toString();
                 return { q: `度数 ${n}、(階級値×度数)の総和が ${sum} のとき、平均値を求めよ`, a: ans, c: generateChoices(ans, () => (avg + r(-3,3)).toString()) };
             }
+            do { type = r(0, 3); } while (type === state.lastType);
+            state.lastType = type;
             if (type === 0) { 
                 const total = [20, 25, 40, 50, 100][r(0,4)];
                 const freq = r(2, total/2);
                 const ans = (freq/total).toFixed(2);
                 return { q: `度数合計 ${total}、ある階級が ${freq} のとき、相対度数は？`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
             } else if (type === 1) { 
-                const a=r(2,5), b=r(3,8), c=r(1,4);
-                const ans = (a+b+c).toString();
-                return { q: `第1階級:${a}、第2階級:${b}、第3階級:${c}のとき、第3階級までの累積度数は？`, a: ans, c: generateChoices(ans, () => (a+b+c+r(-2,2)).toString()) };
+                const width = [2, 5, 10][r(0,2)];
+                const ans = width.toString() + "kg";
+                return { q: `階級が 10kg以上${10+width}kg未満 のとき、階級の幅を求めよ`, a: ans, c: generateChoices(ans, () => r(2,15).toString() + "kg") };
             } else if (type === 2) { 
+                const pool = [{q:"各階級の中央の値",a:"階級値"},{q:"累積した度数の合計",a:"累積度数"},{q:"最も度数が多い階級値",a:"最頻値"}];
+                const p = pool[r(0,2)];
+                return { q: p.q + " とは何か？", a: p.a, c: shuffle(["階級値", "累積度数", "最頻値", "相対度数"]) };
+            } else {
                 const total = r(50, 150);
                 const hit = r(10, 40);
                 const ans = (hit/total).toFixed(2);
-                return { q: `過去 ${total} 日中 ${hit} 日が晴れだった。晴れた日の相対度数を求めよ`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
-            } else if (type === 3) { 
-                const start = r(10, 30);
-                const width = [2, 5, 10][r(0,2)];
-                const ans = width.toString() + "kg";
-                return { q: `階級が ${start}kg以上${start+width}kg未満 のとき、階級の幅を求めよ`, a: ans, c: generateChoices(ans, () => (r(2,15)).toString() + "kg") };
-            } else { 
-                const pool = [{q:"各階級の中央の値",a:"階級値"},{q:"最初の階級からの累積合計",a:"累積度数"},{q:"最も度数が多い階級値",a:"最頻値"}];
-                const p = pool[r(0,2)];
-                return { q: p.q + " とは何のことか？", a: p.a, c: shuffle(["階級値", "累積度数", "最頻値", "相対度数"]) };
+                return { q: `${total}回中 ${hit}回成功した。この相対度数を求めよ`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
             }
         }
     };
@@ -234,11 +242,9 @@
         document.getElementById('question-text').classList.add('hidden');
         document.getElementById('memory-hint').classList.add('hidden');
         document.getElementById('btn-show-choices').classList.add('hidden');
-        
         const area = document.getElementById('choice-area');
         area.innerHTML = '';
         area.classList.remove('hidden');
-        
         state.currentQ.c.forEach(text => {
             const btn = document.createElement('button');
             btn.className = 'btn btn-choice';
@@ -252,9 +258,7 @@
     function checkAnswer(btn, selected) {
         if (state.isLocked) return;
         state.isLocked = true;
-        
         document.getElementById('question-text').classList.remove('hidden');
-        
         const isCorrect = (selected === state.currentQ.a);
         if (isCorrect) {
             btn.classList.add('correct');
@@ -273,13 +277,11 @@
         document.getElementById('score-display').innerText = `Score: ${state.score}`;
         const cb = document.getElementById('combo');
         if (state.combo > 1) { cb.innerText = `${state.combo} COMBO!`; cb.style.display = 'block'; } else cb.style.display = 'none';
-        
         const logItem = document.createElement('div');
         logItem.className = 'log-item';
         logItem.style.color = isCorrect ? 'var(--success)' : 'var(--danger)';
         logItem.innerHTML = `${isCorrect ? '◯' : '×'} ${state.currentQ.q} → 正解: ${state.currentQ.a}`;
         document.getElementById('review-log').prepend(logItem);
-
         if (state.hp <= 0 || state.timeLeft <= 0) {
             setTimeout(() => endGame(state.hp <= 0 ? "GAME OVER" : "TIME UP!"), 600);
         } else {
