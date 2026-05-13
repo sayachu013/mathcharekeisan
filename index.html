@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Slayer: ULTIMATE - Final Battle Special</title>
+    <title>Math Slayer: ULTIMATE - Final Battle Adjusted</title>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         :root { --primary: #3b82f6; --accent: #f59e0b; --danger: #ef4444; --success: #10b981; --dark: #1e293b; --boss: #a855f7; --final: #f43f5e; }
@@ -17,7 +17,6 @@
         .timer-container { font-size: 2.2rem; color: var(--accent); text-align: center; font-family: monospace; text-shadow: 0 0 10px rgba(245,158,11,0.3); }
         .display-area { min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 15px; margin: 15px 0; padding: 25px; border: 1px solid #475569; position: relative; }
         .combo-badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; display: none; z-index: 10; animation: pop 0.3s ease; }
-        @keyframes pop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
         .boss-warning { color: var(--boss); font-weight: bold; animation: blink 1s infinite; display: none; margin-bottom: 10px; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
@@ -38,7 +37,7 @@
 <div class="game-container" id="game-wrap">
     <div id="screen-menu">
         <h1 style="text-align:center; color: var(--primary);">Math Slayer: ULTIMATE</h1>
-        <p style="text-align:center; opacity:0.8; font-size: 0.85rem; margin-bottom: 25px;">最終決戦：正解時+30秒Ver.</p>
+        <p style="text-align:center; opacity:0.8; font-size: 0.85rem; margin-bottom: 25px;">最終決戦：15s回復 / 4ミス終了 / 5分強制クリア</p>
         <div style="display:grid; gap:12px;">
             <button class="btn btn-main" onclick="startGame('shiki')">中2：式の計算</button>
             <button class="btn btn-main" onclick="startGame('data')">中1：データの活用</button>
@@ -48,9 +47,9 @@
     </div>
 
     <div id="screen-game" class="hidden">
-        <div class="status-bar"><span>HP</span><span id="score-display">Score: 0</span></div>
+        <div class="status-bar"><span id="hp-label">LIFE: 4</span><span id="score-display">Score: 0</span></div>
         <div class="hp-container"><div id="hp-fill"></div></div>
-        <div class="timer-container" id="timer">01:00</div>
+        <div class="timer-container" id="timer">03:00</div>
         
         <div class="display-area">
             <div id="combo" class="combo-badge">0 COMBO!</div>
@@ -105,9 +104,7 @@
         while(choices.size < 4 && safety < 100) {
             try {
                 let dummy = generatorFunc();
-                if (dummy && typeof dummy === 'string' && dummy.length > 0) {
-                    choices.add(dummy);
-                }
+                if (dummy && typeof dummy === 'string' && dummy.length > 0) choices.add(dummy);
             } catch(e) { }
             safety++;
         }
@@ -121,17 +118,14 @@
             const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
             if (isBoss || state.mode === 'final') {
                 const d1 = [3, 4, 5][r(0,2)], d2 = [2, 6][r(0,1)];
-                const a1 = r(2,4), b1 = r(1,2);
-                const a2 = r(1,2), b2 = r(2,3);
+                const a1 = r(2,4), b1 = r(1,2), a2 = r(1,2), b2 = r(2,3);
                 const qTex = `\\( \\frac{${fmt(a1,"a")}${fmtS(-b1,"b")}}{${d1}} - \\frac{${fmt(a2,"a")}${fmtS(-b2,"b")}}{${d2}} \\)`;
                 const denom = d1 * d2;
                 const numA = (d2 * a1) - (d1 * a2);
                 const numB = (d2 * -b1) - (d1 * -b2);
                 const ans = `\\( \\frac{${fmt(numA,"a")}${fmtS(numB,"b")}}{${denom}} \\)`;
                 return { q: qTex + " を計算せよ", a: ans, c: generateChoices(ans, () => {
-                    const errA = numA + r(-1, 1);
-                    const errB = numB + r(-1, 1);
-                    return `\\( \\frac{${fmt(errA,"a")}${fmtS(errB,"b")}}{${denom}} \\)`;
+                    return `\\( \\frac{${fmt(numA + r(-1, 1),"a")}${fmtS(numB + r(-1, 1),"b")}}{${denom}} \\)`;
                 })};
             }
             let type = r(0, 2);
@@ -169,8 +163,7 @@
                 const ans = (a+b).toString();
                 return { q: `第1階級:${a}、第2階級:${b}のとき、第2階級までの累積度数は？`, a: ans, c: generateChoices(ans, () => (a+b+r(-2,2)).toString()) };
             } else {
-                const pool = [{q:"各階級の中央の値",a:"階級値"},{q:"累積した度数の合計",a:"累積度数"},{q:"最も度数が多い階級値",a:"最頻値"}];
-                const p = pool[r(0,2)];
+                const p = [{q:"各階級の中央の値",a:"階級値"},{q:"累積した度数の合計",a:"累積度数"},{q:"最も度数が多い階級値",a:"最頻値"}][r(0,2)];
                 return { q: p.q + " とは何か？", a: p.a, c: shuffle(["階級値", "累積度数", "最頻値", "相対度数"]) };
             }
         }
@@ -182,9 +175,8 @@
         document.getElementById('screen-menu').classList.add('hidden');
         document.getElementById('screen-game').classList.remove('hidden');
         const wrap = document.getElementById('game-wrap');
-        if (mode === 'final') wrap.classList.add('final-mode');
-        else wrap.classList.remove('final-mode');
-        document.getElementById('hp-fill').style.width = "100%";
+        if (mode === 'final') wrap.classList.add('final-mode'); else wrap.classList.remove('final-mode');
+        updateHP();
         document.getElementById('score-display').innerText = "Score: 0";
         document.getElementById('review-log').innerHTML = "";
         updateTimerDisplay();
@@ -197,20 +189,26 @@
         state.timeLeft--;
         if (state.timeLeft < 0) state.timeLeft = 0;
         updateTimerDisplay();
+
+        // 5分(300秒)で強制クリア
+        if (state.timeLeft >= 300) {
+            endGame("ULTIMATE CLEAR!");
+            return;
+        }
+
         if (state.timeLeft <= 0) endGame("TIME UP!");
     }
 
     function updateTimerDisplay() {
         const m = Math.floor(state.timeLeft / 60);
-        const s = state.timeLeft % 60;
+        const s = Math.floor(state.timeLeft % 60);
         document.getElementById('timer').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
     }
 
     function nextQuestion() {
         state.isLocked = false;
         state.isBoss = (state.correctCount > 0 && state.correctCount % 5 === 0);
-        const bl = document.getElementById('boss-label');
-        bl.style.display = state.isBoss ? 'block' : 'none';
+        document.getElementById('boss-label').style.display = state.isBoss ? 'block' : 'none';
         const m = (state.mode === 'final' || state.mode === 'exam') ? (Math.random() > 0.5 ? 'shiki' : 'data') : state.mode;
         state.currentQ = generators[m](state.isBoss);
         document.getElementById('question-text').classList.remove('hidden');
@@ -246,10 +244,11 @@
             btn.classList.add('correct');
             state.combo++; state.correctCount++;
             state.score += (state.isBoss ? 1000 : 200) + (state.combo * 50);
-            // 最終決戦のみ30秒回復、それ以外は5秒
-            state.timeLeft += (state.mode === 'final' ? 30 : 5); 
+            state.timeLeft += (state.mode === 'final' ? 15 : 5); 
         } else {
-            btn.classList.add('wrong'); state.combo = 0; state.hp -= (state.isBoss ? 40 : 25);
+            btn.classList.add('wrong'); state.combo = 0;
+            // 4回ミスでアウトにするため、1回につき25ダメージ
+            state.hp -= 25;
             state.timeLeft -= 5; if (state.timeLeft < 0) state.timeLeft = 0;
             updateHP();
             Array.from(document.getElementsByClassName('btn-choice')).forEach(b => {
@@ -269,13 +268,18 @@
         document.getElementById('review-log').prepend(logItem);
 
         if (state.hp <= 0 || state.timeLeft <= 0) {
-            setTimeout(() => endGame(state.hp <= 0 ? "GAME OVER" : "TIME UP!"), 600);
+            setTimeout(() => endGame(state.hp <= 0 ? "GAME OVER (4 MISSES)" : "TIME UP!"), 600);
         } else {
             document.getElementById('btn-next').classList.remove('hidden');
         }
     }
 
-    function updateHP() { document.getElementById('hp-fill').style.width = state.hp + "%"; }
+    function updateHP() { 
+        document.getElementById('hp-fill').style.width = state.hp + "%"; 
+        const lives = Math.ceil(state.hp / 25);
+        document.getElementById('hp-label').innerText = `LIFE: ${lives >= 0 ? lives : 0}`;
+    }
+
     function endGame(title) {
         clearInterval(state.timer);
         document.getElementById('screen-game').classList.add('hidden');
