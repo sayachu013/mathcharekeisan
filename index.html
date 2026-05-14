@@ -3,292 +3,380 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Slayer: ULTIMATE - Final Refined UI</title>
+    <title>Math Slayer: CHALLENGE EDITION</title>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
-        :root { --primary: #3b82f6; --accent: #f59e0b; --danger: #ef4444; --success: #10b981; --dark: #1e293b; --boss: #a855f7; --final: #f43f5e; }
-        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; }
+        :root { --primary: #3b82f6; --accent: #f59e0b; --danger: #ef4444; --success: #10b981; --dark: #1e293b; --boss: #a855f7; --gold: linear-gradient(45deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c); }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; overflow-x: hidden; }
         .game-container { max-width: 650px; margin: 10px auto; background: var(--dark); border-radius: 20px; padding: 20px; border: 2px solid #334155; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.5); transition: all 0.3s; }
-        .boss-mode { border-color: var(--boss); box-shadow: 0 0 40px rgba(168, 85, 247, 0.4); }
-        .final-mode { border-color: var(--final); box-shadow: 0 0 60px rgba(244, 63, 94, 0.5); }
+        .btn-cleared { background: var(--gold) !important; color: #4a3703 !important; border: 2px solid #fff !important; animation: shine 3s infinite linear; }
+        @keyframes shine { 0% { filter: brightness(1); } 50% { filter: brightness(1.2); box-shadow: 0 0 15px rgba(252, 246, 186, 0.5); } 100% { filter: brightness(1); } }
+        .clear-mode { border-color: var(--success); box-shadow: 0 0 40px rgba(16, 185, 129, 0.4); }
+        .boss-mode { border-color: var(--boss); box-shadow: 0 0 60px rgba(168, 85, 247, 0.6); transform: scale(1.02); }
         .status-bar { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; align-items: center; margin-bottom: 5px; }
         .hp-container { width: 100%; height: 12px; background: #334155; border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
         #hp-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #10b981, #3b82f6); transition: width 0.3s; }
-        .timer-container { font-size: 2.2rem; color: var(--accent); text-align: center; font-family: monospace; text-shadow: 0 0 10px rgba(245,158,11,0.3); margin-bottom: 10px; }
-        .display-area { min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 15px; margin: 15px 0; padding: 25px; border: 1px solid #475569; position: relative; }
+        .timer-container { font-size: 2.5rem; color: var(--accent); text-align: center; font-family: monospace; text-shadow: 0 0 10px rgba(245,158,11,0.3); margin-bottom: 10px; }
+        .display-area { min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 15px; margin: 15px 0; padding: 25px; border: 1px solid #475569; position: relative; }
         .combo-badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; display: none; z-index: 10; animation: pop 0.3s ease; }
-        .boss-warning { color: var(--boss); font-weight: bold; animation: blink 1s infinite; display: none; margin-bottom: 10px; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
-        .btn { padding: 15px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; }
-        .btn-choice { background: #334155; color: white; border: 1px solid #475569; }
-        .btn-choice:hover:not(:disabled) { background: #475569; }
+        .btn { padding: 15px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1.1rem; transition: 0.2s; outline: none; }
+        .btn-choice { background: #334155; color: white; border: 1px solid #475569; position: relative; }
         .btn-choice.correct { background: var(--success) !important; border-color: var(--success); }
         .btn-choice.wrong { background: var(--danger) !important; border-color: var(--danger); }
+        .btn-choice.reveal-correct { background: #065f46 !important; border-color: var(--success); animation: pulse-correct 1s infinite; }
+        @keyframes pulse-correct { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
         .btn-main { background: var(--primary); color: white; width: 100%; margin-top: 15px; }
-        /* ホームボタンを右上に固定するスタイル */
-        .btn-home { background: #475569; color: white; padding: 5px 10px; font-size: 0.75rem; border-radius: 8px; border: 1px solid #64748b; }
-        .btn-home:hover { background: #64748b; }
-        .log-area { background: #000; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.75rem; max-height: 200px; overflow-y: auto; margin-top: 15px; color: #94a3b8; border: 1px solid #334155; }
-        .log-item { margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 4px; line-height: 1.4; }
+        .btn-challenge { background: var(--boss); color: white; width: 100%; margin-top: 15px; border: 2px solid #fff; }
+        .log-area { background: #000; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.75rem; max-height: 250px; overflow-y: auto; margin-top: 15px; color: #94a3b8; border: 1px solid #334155; }
         .hidden { display: none !important; }
     </style>
 </head>
-<body>
+<body onload="initApp()">
 
 <div class="game-container" id="game-wrap">
     <div id="screen-menu">
-        <h1 style="text-align:center; color: var(--primary);">Math Slayer: ULTIMATE</h1>
-        <p style="text-align:center; opacity:0.8; font-size: 0.85rem; margin-bottom: 25px;">最終決戦：UI最適化済み</p>
-        <div style="display:grid; gap:12px;">
-            <button class="btn btn-main" onclick="startGame('shiki')">中2：式の計算</button>
-            <button class="btn btn-main" onclick="startGame('data')">中1：データの活用</button>
-            <button class="btn btn-main" style="background:var(--accent)" onclick="startGame('exam')">全範囲：模擬テスト</button>
-            <button class="btn btn-main" style="background:var(--final); border: 2px solid white;" onclick="startGame('final')">🔥 最終決戦 (高難度・3分) 🔥</button>
+        <h1 style="text-align:center; color: var(--primary);">数学計算マスター 中1version</h1>
+        <p style="text-align:center; opacity:0.8; font-size: 0.9rem;">【クリア条件】<br>5:00 到達 または 15連続正解</p>
+        <div style="display:grid; gap:12px; margin-top: 20px;">
+            <button id="btn-seifu" class="btn btn-main" onclick="startGame('seifu')">中1 正負の数</button>
+            <button id="btn-mojis" class="btn btn-main" onclick="startGame('mojis')">中1 文字式</button>
+            <button id="btn-houtei" class="btn btn-main" onclick="startGame('houtei')">中1 方程式</button>
+            <button id="btn-challenge" class="btn btn-challenge" onclick="startGame('challenge')">🔥 全単元ボスチャレンジ 🔥</button>
         </div>
     </div>
 
     <div id="screen-game" class="hidden">
         <div class="status-bar">
             <span id="hp-label">LIFE: 4</span>
-            <button class="btn-home" onclick="location.reload()">ホームへ</button>
+            <button style="background:#475569; color:white; border:none; border-radius:8px; padding:5px 10px; cursor:pointer;" onclick="location.reload()">終了</button>
         </div>
         <div class="hp-container"><div id="hp-fill"></div></div>
-        
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <span id="score-display" style="font-weight:bold; font-size:0.9rem;">Score: 0</span>
-            <div class="timer-container" id="timer" style="margin-bottom:0;">03:00</div>
-            <span style="width:50px;"></span> </div>
+        <div class="timer-container" id="timer">03:00</div>
         
         <div class="display-area">
             <div id="combo" class="combo-badge">0 COMBO!</div>
-            <div id="boss-label" class="boss-warning">⚠️ BOSS WARNING ⚠️</div>
-            <div id="question-text" style="font-size:1.3rem; text-align:center; line-height:2.0;"></div>
-            <div id="memory-hint" style="font-size:0.9rem; color:var(--accent); margin-top:20px;">答えがわかったら選択肢を表示してください</div>
+            <div id="boss-label" class="hidden" style="color:var(--boss); font-weight:bold; margin-bottom:10px; font-size:1.4rem;">⚠️ ULTRA BOSS WARNING ⚠️</div>
+            <div id="question-text" style="font-size:1.4rem; text-align:center; line-height:2.0; width:100%;"></div>
+            <div style="font-size:0.9rem; color:var(--accent); margin-top:20px;">解を求めて選択肢を表示</div>
         </div>
 
-        <button id="btn-show-choices" class="btn btn-main" onclick="showChoices()">計算完了！選択肢を表示</button>
+        <button id="btn-show-choices" class="btn btn-main" onclick="showChoices()">選択肢を表示</button>
         <div id="choice-area" class="choice-grid hidden"></div>
         <button id="btn-next" class="btn btn-main hidden" onclick="nextQuestion()">次へ進む (Enter)</button>
     </div>
 
     <div id="screen-result" class="hidden">
-        <h2 style="text-align:center;" id="result-title">QUEST RESULT</h2>
-        <div style="font-size:3.5rem; text-align:center; margin:10px 0; color:var(--accent);" id="final-score">0</div>
-        <div id="review-log" class="log-area"></div>
-        <button class="btn btn-main" style="margin-top:15px;" onclick="location.reload()">メニューに戻る</button>
+        <h2 style="text-align:center;" id="result-title">RESULT</h2>
+        <div style="font-size:3.5rem; text-align:center; margin:10px 0; color:var(--success);" id="final-status">CLEAR!</div>
+        <div id="final-score-detail" style="text-align:center; margin-bottom:10px;"></div>
+        <div id="review-log" class="log-area hidden"></div>
+        <button class="btn btn-main" onclick="location.reload()">戻る</button>
     </div>
 </div>
 
 <script>
-    let state = { hp: 100, score: 0, combo: 0, timeLeft: 60, timer: null, currentQ: null, isLocked: false, correctCount: 0, lastType: -1 };
+    let state = { hp: 100, combo: 0, timeLeft: 180, timer: null, currentQ: null, isLocked: false, correctCount: 0, mode: '', isBoss: false, history: [] };
+
+    function initApp() {
+        sessionStorage.clear();
+        localStorage.clear();
+        checkAchievements();
+    }
+
+    function checkAchievements() {
+        ['seifu', 'mojis', 'houtei', 'challenge'].forEach(m => {
+            if(sessionStorage.getItem('clear_' + m)) {
+                const btn = document.getElementById('btn-' + m);
+                if(btn) {
+                    btn.classList.add('btn-cleared');
+                    if(!btn.innerHTML.includes('👑')) btn.innerHTML += ' 👑';
+                }
+            }
+        });
+    }
+
+    function toFrac(val) {
+        if (val === 0) return "0";
+        if (Number.isInteger(val)) return val.toString();
+        const den = 120, num = Math.round(val * den);
+        const gcd = (a, b) => b === 0 ? Math.abs(a) : gcd(b, a % b);
+        const common = gcd(num, den);
+        const n = num / common, d = den / common;
+        return (n < 0 ? "-" : "") + (d === 1 ? Math.abs(n) : "\\frac{" + Math.abs(n) + "}{" + d + "}");
+    }
 
     function fmt(c, v = "") {
         if (c === 0) return "";
         if (c === 1) return v || "1";
-        if (c === -1) return "-" + (v || "1");
+        if (c === -1) return "-" + (v || "");
         return c + v;
     }
 
     function fmtS(c, v = "") {
         if (c === 0) return "";
-        let res = fmt(c, v);
-        return (c > 0) ? "+" + res : res;
+        return (c > 0 ? "+" : "") + fmt(c, v);
     }
 
-    function shuffle(arr) {
-        let a = [...arr];
-        for (let i = a.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [a[i], a[j]] = [a[j], a[i]];
-        }
-        return a;
-    }
-
-    function generateChoices(correct, generatorFunc) {
-        let choices = new Set();
-        choices.add(correct);
-        let safety = 0;
-        while(choices.size < 4 && safety < 100) {
-            try {
-                let dummy = generatorFunc();
-                if (dummy && typeof dummy === 'string' && dummy.length > 0) choices.add(dummy);
-            } catch(e) { }
-            safety++;
-        }
-        const fallback = ["0", "1", "x", "a+b"];
-        for(let f of fallback) { if(choices.size < 4) choices.add(f); }
-        return shuffle(Array.from(choices));
-    }
+    function wrap(n) { return n < 0 ? "(" + n + ")" : n.toString(); }
 
     const generators = {
-        shiki: (isBoss) => {
+        seifu: (isBoss) => {
             const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-            if (isBoss || state.mode === 'final') {
-                const d1 = [3, 4, 5][r(0,2)], d2 = [2, 6][r(0,1)];
-                const a1 = r(2,4), b1 = r(1,2), a2 = r(1,2), b2 = r(2,3);
-                const qTex = `\\( \\frac{${fmt(a1,"a")}${fmtS(-b1,"b")}}{${d1}} - \\frac{${fmt(a2,"a")}${fmtS(-b2,"b")}}{${d2}} \\)`;
-                const denom = d1 * d2;
-                const numA = (d2 * a1) - (d1 * a2);
-                const numB = (d2 * -b1) - (d1 * -b2);
-                const ans = `\\( \\frac{${fmt(numA,"a")}${fmtS(numB,"b")}}{${denom}} \\)`;
-                return { q: qTex + " を計算せよ", a: ans, c: generateChoices(ans, () => {
-                    return `\\( \\frac{${fmt(numA + r(-1, 1),"a")}${fmtS(numB + r(-1, 1),"b")}}{${denom}} \\)`;
-                })};
+            if (isBoss) {
+                const v = Array.from({length: 6}, () => r(-6, 6) || 1);
+                const q = `${v[0]} + ${wrap(v[1])} \\times ${v[2]} - ${wrap(v[3])}^{2} + ${wrap(v[4])} \\div 2 - ${wrap(v[5])}`;
+                const val = v[0] + (v[1] * v[2]) - Math.pow(v[3], 2) + (v[4] / 2) - v[5];
+                return { q, val, choices: [val, val+1, val-1, 0, val+10] };
             }
+            const n1 = r(-10, 10), n2 = r(-10, 10), n3 = r(-10, 10);
+            const q = `${n1} + ${wrap(n2)} - ${wrap(n3)}`;
+            const val = n1 + n2 - n3;
+            return { q, val, choices: [val, n1+n2+n3, 0, val+1, val-1] };
+        },
+        mojis: (isBoss) => {
+            const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+            const rS = () => (Math.random() > 0.5 ? 1 : -1);
             let type = r(0, 2);
-            if (type === 0) { 
-                const k1=r(2,4), k2=r(3,5), a1=r(2,3);
-                const ans = `\\( ${fmt(k1*a1-k2*2,"x")}${fmtS(k1*(-1)-k2*5,"y")} \\)`;
-                return { q: `\\( ${k1}(${a1}x-y)-${k2}(2x+5y) \\) を簡潔にせよ`, a: ans, c: generateChoices(ans, () => `\\( ${fmt(r(-10,10),"x")}${fmtS(r(-15,15),"y")} \\)`) };
-            } else if (type === 1) { 
-                const a = r(2, 4);
-                const ans = `\\( ${fmt(-(a*a*a),"a^3")} \\)`;
-                return { q: `\\( (-${fmt(a,"a")})^3 \\) を計算せよ`, a: ans, c: generateChoices(ans, () => `\\( ${fmt(r(-30,30),"a^3")} \\)`) };
-            } else { 
-                const k1 = r(2, 6), k2 = r(2, 4);
-                const ans = `\\( ${fmt(k1*k2,"xy")} \\)`;
-                return { q: `\\( ${fmt(k1,"x")} \\times ${fmt(k2,"y")} \\) を計算せよ`, a: ans, c: generateChoices(ans, () => `\\( ${fmt(r(2,24),"xy")} \\)`) };
+            if (isBoss) type = r(3, 4);
+
+            if (type === 0) {
+                const a1 = r(1, 9)*rS(), a2 = r(1, 9)*rS(), a3 = r(1, 9)*rS();
+                const q = `${fmt(a1,"x")}${fmtS(a2,"x")}${fmtS(a3,"x")}`;
+                let res = a1+a2+a3;
+                const aStr = res === 0 ? "0" : fmt(res, "x");
+                return { q, aStr, choices: [aStr, fmt(a1+a2-a3,"x")||"0", "0", "x", "2x"] };
+            } else if (type === 1) {
+                const k = r(2, 5)*rS(), v1 = r(1, 5), v2 = r(1, 5)*rS();
+                // 修正：(-1)(...) を -(...) に
+                const prefix = k === 1 ? "" : (k === -1 ? "-" : k);
+                const q = `${prefix}(${fmt(v1,"x")}${fmtS(v2)})`;
+                const aStr = `${fmt(k*v1,"x")}${fmtS(k*v2)}` || "0";
+                return { q, aStr, choices: [aStr, `${fmt(k*v1,"x")}${fmtS(-k*v2)}`||"0", "x", "0", "1"] };
+            } else if (type === 2) {
+                const xVal = r(-5, 5), k = r(2, 4), c = r(2,10);
+                const q = `x=${xVal} \\text{ のとき } ${k}x - ${wrap(c)}`;
+                const val = k * xVal - c;
+                return { q, val, choices: [val, val+1, -val, 0, val-1] };
+            } else if (type === 3) {
+                const v = Array.from({length: 4}, () => r(-6, 6) || 1);
+                const kVal = v[1];
+                const prefix = kVal === 1 ? "+" : (kVal === -1 ? "-" : (kVal > 0 ? "+" + kVal : kVal));
+                const q = `${fmt(v[0],"x")} ${prefix}(${fmt(v[2],"x")}${fmtS(v[3])})`;
+                let rx = v[0] + v[1]*v[2], rc = v[1]*v[3];
+                const aStr = (rx === 0 && rc === 0) ? "0" : `${fmt(rx,"x")}${fmtS(rc)}`;
+                return { q, aStr, choices: [aStr, `${fmt(rx,"x")}${fmtS(-rc)}`||"0", "0", "x", "2x"] };
+            } else {
+                const d = r(2, 4);
+                const q = `\\frac{${fmt(r(1,3),"x")}${fmtS(r(1,3))}}{${d}} + \\frac{x}{${d+1}}`;
+                const den = d * (d+1);
+                const nx = (d+1)*r(1,3) + d, c = (d+1)*r(1,3);
+                const aStr = `\\frac{${fmt(nx,"x")}${fmtS(c)}}{${den}}`;
+                return { q, aStr, choices: [aStr, `\\frac{${nx}x}{${den}}`, "x", "0", "1"] };
             }
         },
-        data: (isBoss) => {
+        houtei: (isBoss) => {
             const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-            if (isBoss || state.mode === 'final') {
-                const n = [25, 40, 50, 100][r(0,3)];
-                const avg = r(15, 40);
-                const sum = n * avg;
-                const ans = avg.toString();
-                return { q: `度数合計 ${n}、(階級値×度数)の総和 ${sum} のとき、平均値は？`, a: ans, c: generateChoices(ans, () => (avg + r(-3,3)).toString()) };
-            }
-            let type = r(0, 2);
-            if (type === 0) { 
-                const total = [20, 25, 50][r(0,2)];
-                const freq = r(2, total/2);
-                const ans = (freq/total).toFixed(2);
-                return { q: `度数合計 ${total}、ある階級の度数が ${freq} のとき、相対度数は？`, a: ans, c: generateChoices(ans, () => (r(1,9)/10).toFixed(2)) };
-            } else if (type === 1) { 
-                const a=r(5,15), b=r(10,20);
-                const ans = (a+b).toString();
-                return { q: `第1階級:${a}、第2階級:${b}のとき、第2階級までの累積度数は？`, a: ans, c: generateChoices(ans, () => (a+b+r(-2,2)).toString()) };
+            let q, val, choices;
+            if (isBoss) {
+                const d1 = r(2,3), d2 = r(4,5), a = r(1,3), b = r(1,5)*(r(0,1)?1:-1);
+                q = `\\frac{${fmt(a,"x")}${fmtS(b)}}{${d1}} = \\frac{x}{${d2}}`;
+                val = (-b * d2) / (a * d2 - d1);
             } else {
-                const p = [{q:"各階級の中央の値",a:"階級値"},{q:"累積した度数の合計",a:"累積度数"},{q:"最も度数が多い階級値",a:"最頻値"}][r(0,2)];
-                return { q: p.q + " とは何か？", a: p.a, c: shuffle(["階級値", "累積度数", "最頻値", "相対度数"]) };
+                const type = r(0, 3);
+                if (type === 0) {
+                    const a1 = r(2, 6), a2 = r(1, 5), c1 = r(1, 10)*(r(0,1)?1:-1), c2 = r(1, 10)*(r(0,1)?1:-1);
+                    q = `${fmt(a1,"x")}${fmtS(c1)} = ${fmt(a2,"x")}${fmtS(c2)}`;
+                    val = (c2 - c1) / (a1 - a2);
+                } else if (type === 1) {
+                    const k = r(2, 4), a = r(1, 3), b = r(1, 5)*(r(0,1)?1:-1), c = r(1, 10)*(r(0,1)?1:-1);
+                    const prefix = k === 1 ? "" : (k === -1 ? "-" : k);
+                    q = `${prefix}(${fmt(a,"x")}${fmtS(b)}) = ${c}`;
+                    val = (c / k - b) / a;
+                } else if (type === 2) {
+                    const d = r(2, 5), a = r(1, 3), b = r(1, 5)*(r(0,1)?1:-1), c = r(1, 4)*(r(0,1)?1:-1);
+                    q = `\\frac{${fmt(a,"x")}}{${d}}${fmtS(b)} = ${c}`;
+                    val = (c - b) * d / a;
+                } else {
+                    const a = r(2, 5), b = r(2, 6), c = r(1, 5);
+                    q = `x : ${a} = ${b} : ${c}`;
+                    val = a * b / c;
+                }
+            }
+            if (!isFinite(val)) return generators.houtei(isBoss);
+            choices = [val, -val, val === 0 ? 1 : 1/val, val+1, val-1, 0];
+            return { q, val, choices };
+        },
+        shiki: (isBoss) => {
+            const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+            const rS = () => (Math.random() > 0.5 ? 1 : -1);
+            let type = isBoss ? r(3, 5) : r(0, 5);
+            if (type === 0) {
+                const a1 = r(1, 7)*rS(), a2 = r(1, 7)*rS(), b1 = r(1, 7)*rS(), b2 = r(1, 7)*rS();
+                const q = `${fmt(a1,"x")}${fmtS(b1,"y")}${fmtS(a2,"x")}${fmtS(b2,"y")}`;
+                const aStr = (a1+a2===0 && b1+b2===0) ? "0" : `${fmt(a1+a2,"x")}${fmtS(b1+b2,"y")}`;
+                return { q, aStr, choices: [aStr, `${fmt(a1+a2,"x")}${fmtS(-(b1+b2),"y")}`, "0", "x+y", "x-y"] };
+            } else if (type === 1) {
+                const k1 = r(2, 3), k2 = r(1, 3)*rS();
+                // 修正：(-1)(x-y) を -(x-y) に
+                const prefix2 = k2 === 1 ? "+" : (k2 === -1 ? "-" : (k2 > 0 ? "+" + k2 : k2));
+                const q = `${k1}(x+y)${prefix2}(x-y)`;
+                const aStr = `${fmt(k1+k2,"x")}${fmtS(k1-k2,"y")}` || "0";
+                return { q, aStr, choices: [aStr, `${fmt(k1+k2,"x")}${fmtS(k1+k2,"y")}`, "0", "x", "y"] };
+            } else if (type === 2) {
+                const k = r(2, 5), a = r(1, 4)*k;
+                const q = `(${fmt(a,"x^{2}")}) \\div ${k}`;
+                const aStr = `${fmt(a/k,"x^{2}")}`;
+                return { q, aStr, choices: [aStr, `${a}x^{2}`, "x^{2}", "0", "x"] };
+            } else if (type === 3) {
+                const xVal = r(2, 4), yVal = r(-3, -1), k = r(2, 3);
+                const q = `x=${xVal}, y=${yVal} \\text{ のとき } ${k}(2x+3y)-${k}(x+2y)`;
+                const val = k * xVal + k * yVal;
+                return { q, val, choices: [val, -val, 0, val+1, val-1] };
+            } else if (type === 4) {
+                const q = `\\frac{a+b}{2} - \\frac{a-b}{3}`;
+                const aStr = `\\frac{a+5b}{6}`;
+                return { q, aStr, choices: [aStr, "\\frac{a-b}{6}", "0", "\\frac{5a+b}{6}", "\\frac{a+b}{6}"] };
+            } else {
+                return { q: "(-2a)^{2} \\times 3b", aStr: "12a^{2}b", choices: ["12a^{2}b", "6a^{2}b", "-12a^{2}b", "4a^{2}b", "0"] };
             }
         }
     };
 
     function startGame(mode) {
-        state.mode = mode; state.score = 0; state.hp = 100; state.combo = 0; state.correctCount = 0;
-        state.timeLeft = (mode === 'final' ? 180 : 60);
+        state = { hp: 100, combo: 0, timeLeft: 180, timer: null, currentQ: null, isLocked: false, correctCount: 0, mode: mode, history: [] };
         document.getElementById('screen-menu').classList.add('hidden');
         document.getElementById('screen-game').classList.remove('hidden');
-        const wrap = document.getElementById('game-wrap');
-        if (mode === 'final') wrap.classList.add('final-mode'); else wrap.classList.remove('final-mode');
-        updateHP();
-        document.getElementById('score-display').innerText = "Score: 0";
-        document.getElementById('review-log').innerHTML = "";
-        updateTimerDisplay();
-        if(state.timer) clearInterval(state.timer);
         state.timer = setInterval(tick, 1000);
         nextQuestion();
     }
 
     function tick() {
         state.timeLeft--;
-        if (state.timeLeft < 0) state.timeLeft = 0;
-        updateTimerDisplay();
-        if (state.timeLeft >= 300) { endGame("ULTIMATE CLEAR!"); return; }
-        if (state.timeLeft <= 0) endGame("TIME UP!");
-    }
-
-    function updateTimerDisplay() {
-        const m = Math.floor(state.timeLeft / 60);
-        const s = Math.floor(state.timeLeft % 60);
+        const m = Math.floor(state.timeLeft / 60), s = Math.floor(state.timeLeft % 60);
         document.getElementById('timer').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        if (state.timeLeft <= 0) endGame("TIME UP", false);
+        if (state.timeLeft >= 300) endGame("TIME GOAL!", true);
     }
 
     function nextQuestion() {
         state.isLocked = false;
-        state.isBoss = (state.correctCount > 0 && state.correctCount % 5 === 0);
-        document.getElementById('boss-label').style.display = state.isBoss ? 'block' : 'none';
-        const m = (state.mode === 'final' || state.mode === 'exam') ? (Math.random() > 0.5 ? 'shiki' : 'data') : state.mode;
-        state.currentQ = generators[m](state.isBoss);
-        document.getElementById('question-text').classList.remove('hidden');
-        document.getElementById('memory-hint').classList.remove('hidden');
+        
+        if (state.mode === 'challenge') {
+            state.isBoss = true;
+            const modes = ['seifu', 'mojis', 'houtei', 'shiki'];
+            const randomMode = modes[Math.floor(Math.random() * modes.length)];
+            state.currentQ = generators[randomMode](true);
+        } else {
+            state.isBoss = (state.correctCount > 0 && (state.correctCount + 1) % 5 === 0);
+            state.currentQ = generators[state.mode](state.isBoss);
+        }
+
+        document.getElementById('boss-label').classList.toggle('hidden', !state.isBoss);
+        document.getElementById('game-wrap').classList.toggle('boss-mode', state.isBoss);
         document.getElementById('btn-show-choices').classList.remove('hidden');
         document.getElementById('choice-area').classList.add('hidden');
         document.getElementById('btn-next').classList.add('hidden');
-        document.getElementById('question-text').innerHTML = state.currentQ.q;
+        document.getElementById('question-text').innerHTML = `\\(${state.currentQ.q}\\)`;
         MathJax.typesetPromise();
     }
 
     function showChoices() {
-        document.getElementById('question-text').classList.add('hidden');
-        document.getElementById('memory-hint').classList.add('hidden');
         document.getElementById('btn-show-choices').classList.add('hidden');
         const area = document.getElementById('choice-area');
         area.innerHTML = ''; area.classList.remove('hidden');
-        state.currentQ.c.forEach(text => {
+        
+        const getDisplay = (v) => {
+            let s = (state.mode === 'houtei' && typeof v === 'number') ? `x=${toFrac(v)}` : (typeof v === 'number' ? toFrac(v) : v);
+            if (state.mode === 'challenge' && typeof v === 'number' && state.currentQ.q.includes('=')) s = `x=${toFrac(v)}`;
+            return (s === "" || s === undefined) ? "0" : s;
+        };
+
+        let uniqueList = [];
+        let seenDisplay = new Set();
+        const correctVal = (typeof state.currentQ.val === 'number') ? state.currentQ.val : (state.currentQ.aStr || "0");
+        const correctDisplay = getDisplay(correctVal);
+        uniqueList.push({ val: correctVal, display: correctDisplay, isCorrect: true });
+        seenDisplay.add(correctDisplay);
+
+        for (let c of (state.currentQ.choices || [])) {
+            const d = getDisplay(c);
+            if (!seenDisplay.has(d) && uniqueList.length < 4) {
+                uniqueList.push({ val: c, display: d, isCorrect: false });
+                seenDisplay.add(d);
+            }
+        }
+        while (uniqueList.length < 4) {
+            const dummy = (typeof correctVal === 'number') ? Math.floor(Math.random()*30 - 15) : "x+9";
+            const d = getDisplay(dummy);
+            if (!seenDisplay.has(d)) {
+                uniqueList.push({ val: dummy, display: d, isCorrect: false });
+                seenDisplay.add(d);
+            }
+        }
+
+        uniqueList.sort(() => Math.random() - 0.5).forEach(item => {
             const btn = document.createElement('button');
-            btn.className = 'btn btn-choice'; btn.innerHTML = text;
-            btn.onclick = () => checkAnswer(btn, text);
+            btn.className = 'btn btn-choice';
+            btn.innerHTML = `\\(${item.display}\\)`;
+            if(item.isCorrect) btn.id = "correct-choice-btn";
+            btn.onclick = () => checkAnswer(btn, item.val, item.isCorrect);
             area.appendChild(btn);
         });
         MathJax.typesetPromise([area]);
     }
 
-    function checkAnswer(btn, selected) {
+    function checkAnswer(btn, selected, isCorrect) {
         if (state.isLocked) return;
         state.isLocked = true;
-        document.getElementById('question-text').classList.remove('hidden');
-        const isCorrect = (selected === state.currentQ.a);
-        if (isCorrect) {
-            btn.classList.add('correct');
-            state.combo++; state.correctCount++;
-            state.score += (state.isBoss ? 1000 : 200) + (state.combo * 50);
-            state.timeLeft += (state.mode === 'final' ? 15 : 5); 
-        } else {
-            btn.classList.add('wrong'); state.combo = 0;
-            state.hp -= 25;
-            state.timeLeft -= 5; if (state.timeLeft < 0) state.timeLeft = 0;
-            updateHP();
-            Array.from(document.getElementsByClassName('btn-choice')).forEach(b => {
-                if(b.innerHTML === state.currentQ.a) b.classList.add('correct');
-            });
-        }
-        updateTimerDisplay();
-        document.getElementById('score-display').innerText = `Score: ${state.score}`;
-        const cb = document.getElementById('combo');
-        cb.innerText = `${state.combo} COMBO!`;
-        cb.style.display = state.combo > 1 ? 'block' : 'none';
         
-        const logItem = document.createElement('div');
-        logItem.className = 'log-item';
-        logItem.style.color = isCorrect ? 'var(--success)' : 'var(--danger)';
-        logItem.innerHTML = `${isCorrect ? '◯' : '×'} ${state.currentQ.q} → 正解: ${state.currentQ.a}`;
-        document.getElementById('review-log').prepend(logItem);
-
-        if (state.hp <= 0 || state.timeLeft <= 0) {
-            setTimeout(() => endGame(state.hp <= 0 ? "GAME OVER (4 MISSES)" : "TIME UP!"), 600);
+        const getDisplay = (v) => (state.mode === 'houtei' && typeof v === 'number') ? `x=${toFrac(v)}` : (typeof v === 'number' ? toFrac(v) : v);
+        const uAns = getDisplay(selected), cAns = getDisplay(typeof state.currentQ.val === 'number' ? state.currentQ.val : state.currentQ.aStr);
+        state.history.push({ q: state.currentQ.q, correct: isCorrect, userAns: uAns, correctAns: cAns });
+        
+        if (isCorrect) {
+            btn.classList.add('correct'); state.combo++; state.correctCount++; state.timeLeft += 15;
+            document.getElementById('combo').innerText = `${state.combo} COMBO!`;
+            document.getElementById('combo').style.display = state.combo > 1 ? 'block' : 'none';
+            if (state.combo >= 15) { setTimeout(() => endGame("COMBO GOAL!", true), 600); return; }
         } else {
-            document.getElementById('btn-next').classList.remove('hidden');
+            btn.classList.add('wrong');
+            if(document.getElementById('correct-choice-btn')) document.getElementById('correct-choice-btn').classList.add('reveal-correct');
+            state.combo = 0; state.hp -= 25; state.timeLeft = Math.max(0, state.timeLeft - 15);
+            document.getElementById('hp-fill').style.width = `${state.hp}%`;
+            document.getElementById('hp-label').innerText = `LIFE: ${Math.max(0, Math.ceil(state.hp/25))}`;
         }
+        if (state.hp <= 0) setTimeout(() => endGame("GAME OVER", false), 600);
+        else document.getElementById('btn-next').classList.remove('hidden');
     }
 
-    function updateHP() { 
-        document.getElementById('hp-fill').style.width = state.hp + "%"; 
-        const lives = Math.ceil(state.hp / 25);
-        document.getElementById('hp-label').innerText = `LIFE: ${lives >= 0 ? lives : 0}`;
-    }
-
-    function endGame(title) {
+    function endGame(title, isClear) {
         clearInterval(state.timer);
+        if(isClear) sessionStorage.setItem('clear_' + state.mode, 'true');
         document.getElementById('screen-game').classList.add('hidden');
         document.getElementById('screen-result').classList.remove('hidden');
         document.getElementById('result-title').innerText = title;
-        document.getElementById('final-score').innerText = state.score;
-        MathJax.typesetPromise([document.getElementById('review-log')]);
+        const logArea = document.getElementById('review-log');
+        logArea.classList.remove('hidden');
+        logArea.innerHTML = '<h3 style="margin-top:0; color:var(--accent);">復習ログ</h3>';
+        state.history.forEach((item, index) => {
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+            logItem.style.color = item.correct ? 'var(--success)' : 'var(--danger)';
+            logItem.innerHTML = `${item.correct ? '◯' : '×'} 問${index+1}: \\(${item.q}\\)<br>${item.correct ? '正解: ' : '不正解! あなた: '}\\(${item.userAns}\\) → 正解: \\(${item.correctAns}\\)`;
+            logArea.prepend(logItem);
+        });
+        MathJax.typesetPromise([logArea]);
+        checkAchievements();
     }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const nextBtn = document.getElementById('btn-next');
+            if (!nextBtn.classList.contains('hidden')) nextQuestion();
+            else if (!document.getElementById('btn-show-choices').classList.contains('hidden')) showChoices();
+        }
+    });
 </script>
 </body>
 </html>
