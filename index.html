@@ -151,7 +151,7 @@
                 const v = Array.from({length: 6}, () => r(-10, 10));
                 const ops = [
                     () => {
-                        const q = `${v[0]} + ${wrap(v[1])} \\times ${v[2]} - ${wrap(v[3])}^{2} + ${wrap(v[4] * 2)} \\div 2 - ${wrap(v[5])}`;
+                        const q = `${v[0]} + ${wrap(v[1])} \\times ${wrap(v[2])} - ${wrap(v[3])}^{2} + ${wrap(v[4] * 2)} \\div 2 - ${wrap(v[5])}`;
                         const val = v[0] + (v[1] * v[2]) - Math.pow(v[3], 2) + v[4] - v[5];
                         return { q, val };
                     },
@@ -376,7 +376,6 @@
         const getDisplay = (v) => {
             const isEquation = state.mode === 'houtei' || (state.mode === 'challenge' && state.currentQ.q.includes('='));
             let s = (isEquation && typeof v === 'number') ? `x=${toFrac(v)}` : (typeof v === 'number' ? toFrac(v) : v);
-            // 表示文字列が完全に空またはundefinedの場合のみ"0"を返し、それ以外は保持する
             return (s === "" || s === undefined || s === null) ? "0" : s;
         };
         
