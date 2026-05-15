@@ -134,9 +134,7 @@
 
     function fmtS(c, v = "") {
         if (c === 0) return "";
-        // 文字列(v)がない定数項の場合は、数値をそのまま符号付きで返す
         if (v === "") return (c > 0 ? "+" : "") + c;
-        // 文字列がある場合は従来のfmtロジックを使用
         return (c > 0 ? "+" : "") + fmt(c, v);
     }
 
@@ -374,26 +372,38 @@
         document.getElementById('guide-text').classList.add('invisible');
         const area = document.getElementById('choice-area');
         area.innerHTML = ''; area.classList.remove('hidden');
+        
         const getDisplay = (v) => {
             const isEquation = state.mode === 'houtei' || (state.mode === 'challenge' && state.currentQ.q.includes('='));
             let s = (isEquation && typeof v === 'number') ? `x=${toFrac(v)}` : (typeof v === 'number' ? toFrac(v) : v);
-            return (s === "" || s === undefined) ? "0" : s;
+            // 表示文字列が完全に空またはundefinedの場合のみ"0"を返し、それ以外は保持する
+            return (s === "" || s === undefined || s === null) ? "0" : s;
         };
+        
         let uniqueList = [];
         let seenDisplay = new Set();
         const correctVal = (typeof state.currentQ.val === 'number') ? state.currentQ.val : (state.currentQ.aStr || "1");
         const correctDisplay = getDisplay(correctVal);
         uniqueList.push({ val: correctVal, display: correctDisplay, isCorrect: true });
         seenDisplay.add(correctDisplay);
+        
         for (let c of (state.currentQ.choices || [])) {
             const d = getDisplay(c);
-            if (!seenDisplay.has(d) && uniqueList.length < 4 && d !== "0") { uniqueList.push({ val: c, display: d, isCorrect: false }); seenDisplay.add(d); }
+            if (!seenDisplay.has(d) && uniqueList.length < 4) {
+                uniqueList.push({ val: c, display: d, isCorrect: false });
+                seenDisplay.add(d);
+            }
         }
+        
         while (uniqueList.length < 4) {
             const dummy = (typeof correctVal === 'number') ? Math.floor(Math.random()*40 - 20) : "x+" + Math.floor(Math.random()*10 + 1);
             const d = getDisplay(dummy);
-            if (!seenDisplay.has(d) && d !== "0") { uniqueList.push({ val: dummy, display: d, isCorrect: false }); seenDisplay.add(d); }
+            if (!seenDisplay.has(d)) {
+                uniqueList.push({ val: dummy, display: d, isCorrect: false });
+                seenDisplay.add(d);
+            }
         }
+        
         uniqueList.sort(() => Math.random() - 0.5).forEach(item => {
             const btn = document.createElement('button');
             btn.className = 'btn btn-choice';
