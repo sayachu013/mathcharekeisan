@@ -31,6 +31,12 @@
         .log-area { background: #000; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.75rem; max-height: 250px; overflow-y: auto; margin-top: 15px; color: #94a3b8; border: 1px solid #334155; }
         .hidden { display: none !important; }
         .invisible { visibility: hidden !important; }
+
+        /* 追加スタイル: セレクターパネル用 */
+        .selection-panel { background: rgba(168, 85, 247, 0.1); border: 1px solid var(--boss); border-radius: 15px; padding: 15px; margin-top: 15px; text-align: left; }
+        .selection-panel h3 { margin-top: 0; font-size: 1rem; color: var(--boss); text-align: center; }
+        .check-item { display: flex; align-items: center; margin: 8px 0; cursor: pointer; font-size: 1rem; }
+        .check-item input { margin-right: 12px; transform: scale(1.3); }
     </style>
 </head>
 <body onload="initApp()">
@@ -43,7 +49,16 @@
             <button id="btn-seifu" class="btn btn-main" onclick="startGame('seifu')">中1 正負の数</button>
             <button id="btn-mojis" class="btn btn-main" onclick="startGame('mojis')">中1 文字式</button>
             <button id="btn-houtei" class="btn btn-main" onclick="startGame('houtei')">中1 方程式</button>
-            <button id="btn-challenge" class="btn btn-challenge" onclick="startGame('challenge')">🔥 全単元ボスチャレンジ 🔥</button>
+            
+            <button id="btn-challenge-toggle" class="btn btn-challenge" onclick="toggleBossSelection()">🔥 ボスチャレンジ設定 🔥</button>
+            
+            <div id="boss-selection" class="selection-panel hidden">
+                <h3>挑戦する単元を選択</h3>
+                <label class="check-item"><input type="checkbox" class="boss-check" value="seifu" checked> 正負の数</label>
+                <label class="check-item"><input type="checkbox" class="boss-check" value="mojis" checked> 文字式</label>
+                <label class="check-item"><input type="checkbox" class="boss-check" value="houtei" checked> 方程式</label>
+                <button id="btn-challenge" class="btn btn-challenge" style="margin-top:10px;" onclick="startGame('challenge')">開始！</button>
+            </div>
         </div>
     </div>
 
@@ -77,7 +92,8 @@
 </div>
 
 <script>
-    let state = { hp: 100, combo: 0, timeLeft: 180, timer: null, currentQ: null, isLocked: false, correctCount: 0, mode: '', isBoss: false, history: [] };
+    let state = { hp: 100, combo: 0, timeLeft: 180, timer: null, currentQ: null, isLocked: false, correctCount: 0, mode: '', isBoss: false, history: [], selectedBossModes: [] };
+    const ALL_CHALLENGE_MODES = ['seifu', 'mojis', 'houtei'];
 
     function initApp() {
         checkAchievements();
@@ -88,7 +104,7 @@
             { id: 'btn-seifu', key: 'clear_seifu' },
             { id: 'btn-mojis', key: 'clear_mojis' },
             { id: 'btn-houtei', key: 'clear_houtei' },
-            { id: 'btn-challenge', key: 'clear_challenge' }
+            { id: 'btn-challenge-toggle', key: 'clear_challenge' }
         ];
 
         modes.forEach(m => {
@@ -100,6 +116,11 @@
                 }
             }
         });
+    }
+
+    function toggleBossSelection() {
+        const panel = document.getElementById('boss-selection');
+        panel.classList.toggle('hidden');
     }
 
     function toFrac(val) {
@@ -319,7 +340,22 @@
     };
 
     function startGame(mode) {
-        state = { hp: 100, combo: 0, timeLeft: 180, timer: null, currentQ: null, isLocked: false, correctCount: 0, mode: mode, history: [] };
+        let selectedModes = [];
+        if (mode === 'challenge') {
+            const checks = document.querySelectorAll('.boss-check:checked');
+            checks.forEach(c => selectedModes.push(c.value));
+            if (selectedModes.length === 0) {
+                alert("少なくとも1つの単元を選択してください。");
+                return;
+            }
+        }
+
+        state = { 
+            hp: 100, combo: 0, timeLeft: 180, timer: null, currentQ: null, 
+            isLocked: false, correctCount: 0, mode: mode, history: [],
+            selectedBossModes: selectedModes 
+        };
+        
         document.getElementById('screen-menu').classList.add('hidden');
         document.getElementById('screen-game').classList.remove('hidden');
         state.timer = setInterval(tick, 1000);
@@ -341,8 +377,7 @@
 
         if (state.mode === 'challenge') {
             state.isBoss = true;
-            const modes = ['seifu', 'mojis', 'houtei', 'shiki'];
-            const randomMode = modes[Math.floor(Math.random() * modes.length)];
+            const randomMode = state.selectedBossModes[Math.floor(Math.random() * state.selectedBossModes.length)];
             state.currentQ = generators[randomMode](true);
         } else {
             state.isBoss = (state.correctCount > 0 && (state.correctCount + 1) % 5 === 0);
@@ -443,7 +478,15 @@
         const finalStatus = document.getElementById('final-status');
         
         if(isClear) {
-            sessionStorage.setItem('clear_' + state.mode, 'true');
+            if (state.mode === 'challenge') {
+                // すべての中1単元（seifu, mojis, houtei）が選択されている場合のみ王冠を付与
+                const isAllSelected = ALL_CHALLENGE_MODES.every(m => state.selectedBossModes.includes(m));
+                if (isAllSelected) {
+                    sessionStorage.setItem('clear_' + state.mode, 'true');
+                }
+            } else {
+                sessionStorage.setItem('clear_' + state.mode, 'true');
+            }
             finalStatus.innerText = "CLEAR!";
             finalStatus.style.color = "var(--success)";
         } else {
@@ -473,7 +516,7 @@
         if (e.key === 'Enter') {
             const nextBtn = document.getElementById('btn-next');
             if (!nextBtn.classList.contains('hidden')) nextQuestion();
-            else if (!document.getElementById('btn-show-choices').classList.contains('hidden')) showChoices();
+            else if (!document.getElementById('btn-show-choices').classList.contains('hidden') && !document.getElementById('screen-game').classList.contains('hidden')) showChoices();
         }
     });
 </script>
