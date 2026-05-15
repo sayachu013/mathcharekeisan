@@ -30,7 +30,6 @@
         .btn-challenge { background: var(--boss); color: white; width: 100%; margin-top: 15px; border: 2px solid #fff; }
         .log-area { background: #000; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.75rem; max-height: 250px; overflow-y: auto; margin-top: 15px; color: #94a3b8; border: 1px solid #334155; }
         .hidden { display: none !important; }
-        /* 修正：不正防止用の非表示スタイル */
         .invisible { visibility: hidden !important; }
     </style>
 </head>
@@ -129,9 +128,13 @@
 
     const generators = {
         seifu: (isBoss) => {
-            const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+            const r = (min, max) => {
+                let res = 0;
+                while(res === 0) res = Math.floor(Math.random() * (max - min + 1)) + min;
+                return res;
+            };
             if (isBoss) {
-                const v = Array.from({length: 6}, () => r(-10, 10) || 1);
+                const v = Array.from({length: 6}, () => r(-10, 10));
                 const ops = [
                     () => {
                         const q = `${v[0]} + ${wrap(v[1])} \\times ${v[2]} - ${wrap(v[3])}^{2} + ${wrap(v[4] * 2)} \\div 2 - ${wrap(v[5])}`;
@@ -144,90 +147,105 @@
                         return { q, val };
                     }
                 ];
-                const res = ops[r(0, ops.length - 1)]();
-                return { ...res, choices: [res.val, res.val+1, res.val-1, 0, res.val+10] };
+                let res = ops[Math.floor(Math.random() * ops.length)]();
+                if(res.val === 0) return generators.seifu(true);
+                return { ...res, choices: [res.val, res.val+1, res.val-1, res.val+2, res.val+10] };
             }
-            const nums = Array.from({length: r(3, 4)}, () => r(-15, 15));
+            const nums = Array.from({length: Math.floor(Math.random() * 2) + 3}, () => r(-15, 15));
             let q = wrap(nums[0]), val = nums[0];
             for(let i=1; i<nums.length; i++) {
-                const op = r(0, 1) ? '+' : '-';
+                const op = Math.random() > 0.5 ? '+' : '-';
                 q += ` ${op} ${wrap(nums[i])}`;
                 val = op === '+' ? val + nums[i] : val - nums[i];
             }
-            return { q, val, choices: [val, val + r(-5, 5), 0, val + 1, val - 1] };
+            if(val === 0) return generators.seifu(false);
+            return { q, val, choices: [val, val + 2, val - 2, val + 1, val - 1] };
         },
         mojis: (isBoss) => {
-            const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+            const r = (min, max) => {
+                let res = 0;
+                while(res === 0) res = Math.floor(Math.random() * (max - min + 1)) + min;
+                return res;
+            };
             const rS = () => (Math.random() > 0.5 ? 1 : -1);
-            let type = r(0, 3);
-            if (isBoss) type = r(4, 6);
+            let type = Math.floor(Math.random() * 4);
+            if (isBoss) type = Math.floor(Math.random() * 3) + 4;
 
             if (type === 0) {
-                const count = r(2, 4);
-                let coeffs = Array.from({length: count}, () => r(1, 12) * rS());
+                const count = Math.floor(Math.random() * 2) + 2;
+                let coeffs = Array.from({length: count}, () => r(-12, 12));
                 let q = fmt(coeffs[0], "x");
                 let res = coeffs[0];
                 for(let i=1; i<count; i++) {
                     q += fmtS(coeffs[i], "x");
                     res += coeffs[i];
                 }
-                const aStr = res === 0 ? "0" : fmt(res, "x");
-                return { q, aStr, choices: [aStr, fmt(res+rS(), "x"), "0", "x", "2x"] };
+                if(res === 0) return generators.mojis(false);
+                const aStr = fmt(res, "x");
+                return { q, aStr, choices: [aStr, fmt(res+rS(), "x"), fmt(-res, "x"), "x", "2x"] };
             } else if (type === 1) {
-                const a = r(2, 9) * rS(), b = r(2, 5);
-                if(r(0, 1)) {
+                const a = r(-9, 9), b = r(2, 5);
+                if(Math.random() > 0.5) {
                     return { q: `${fmt(a, "x")} \\times ${b}`, aStr: fmt(a*b, "x"), choices: [fmt(a*b, "x"), fmt(a+b, "x"), "x"] };
                 } else {
                     const c = a * b;
                     return { q: `${fmt(c, "x")} \\div ${b}`, aStr: fmt(a, "x"), choices: [fmt(a, "x"), fmt(c-b, "x"), "x"] };
                 }
             } else if (type === 2) {
-                const xVal = r(-6, 6), k = r(2, 5) * rS(), c = r(1, 12) * rS();
+                const xVal = r(-6, 6), k = r(-5, 5), c = r(-12, 12);
                 const q = `x=${xVal} \\text{ のとき } ${fmt(k, "x")} ${fmtS(c)}`;
                 const val = k * xVal + c;
-                return { q, val, choices: [val, val + rS(), -val, 0] };
+                if(val === 0) return generators.mojis(false);
+                return { q, val, choices: [val, val + rS(), -val, val + 2] };
             } else if (type === 3) {
-                const k = r(2, 5) * rS(), v1 = r(1, 6) * rS(), v2 = r(1, 6) * rS();
+                const k = r(-5, 5), v1 = r(-6, 6), v2 = r(-6, 6);
                 const q = `${k === 1 ? "" : (k === -1 ? "-" : k)}(${fmt(v1, "x")}${fmtS(v2)})`;
                 const rx = k * v1, rc = k * v2;
-                const aStr = (rx === 0 && rc === 0) ? "0" : (fmt(rx, "x") + (rx !== 0 ? fmtS(rc) : fmt(rc)));
-                return { q, aStr, choices: [aStr, fmt(rx, "x") + fmtS(-rc), "0", "x"] };
+                if(rx === 0 || rc === 0) return generators.mojis(false);
+                const aStr = fmt(rx, "x") + fmtS(rc);
+                return { q, aStr, choices: [aStr, fmt(rx, "x") + fmtS(-rc), fmt(-rx, "x") + fmtS(rc), "x"] };
             } else if (type === 4) {
-                const k1 = r(2, 4) * rS(), k2 = r(2, 4) * rS();
-                const v = Array.from({length: 4}, () => r(-5, 5) || 1);
+                const k1 = r(-4, 4), k2 = r(-4, 4);
+                const v = Array.from({length: 4}, () => r(-5, 5));
                 const q = `${fmt(k1)}(${fmt(v[0], "x")}${fmtS(v[1])}) ${fmtS(k2)}(${fmt(v[2], "x")}${fmtS(v[3])})`;
                 const rx = k1 * v[0] + k2 * v[2], rc = k1 * v[1] + k2 * v[3];
-                const aStr = (rx === 0 && rc === 0) ? "0" : (fmt(rx, "x") + (rx !== 0 ? fmtS(rc) : fmt(rc)));
-                return { q, aStr, choices: [aStr, fmt(rx, "x"), fmt(rc), "0"] };
+                if(rx === 0 || rc === 0) return generators.mojis(true);
+                const aStr = fmt(rx, "x") + fmtS(rc);
+                return { q, aStr, choices: [aStr, fmt(rx, "x"), fmt(rc), "x+1"] };
             } else {
-                const d = r(2, 6);
-                const a1 = r(1, 5), a2 = r(1, 5), c1 = r(1, 5) * rS();
+                const d = Math.floor(Math.random() * 5) + 2;
+                const a1 = r(1, 5), a2 = r(1, 5), c1 = r(-5, 5);
                 const q = `\\frac{${fmt(a1, "x")}${fmtS(c1)}}{${d}} + \\frac{${fmt(a2, "x")}}{${d+1}}`;
                 const den = d * (d+1);
                 const nx = a1 * (d+1) + a2 * d, nc = c1 * (d+1);
+                if(nc === 0) return generators.mojis(true);
                 const aStr = `\\frac{${fmt(nx, "x")}${fmtS(nc)}}{${den}}`;
-                return { q, aStr, choices: [aStr, `\\frac{${nx}x}{${den}}`, "x", "0"] };
+                return { q, aStr, choices: [aStr, `\\frac{${nx}x}{${den}}`, "x", "1"] };
             }
         },
         houtei: (isBoss) => {
-            const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-            let q, val, choices;
+            const r = (min, max) => {
+                let res = 0;
+                while(res === 0) res = Math.floor(Math.random() * (max - min + 1)) + min;
+                return res;
+            };
+            let q, val;
             if (isBoss) {
-                const type = r(0, 1);
+                const type = Math.random() > 0.5 ? 0 : 1;
                 if (type === 0) {
-                    const d1 = r(2, 4), d2 = r(3, 5), a = r(1, 4), b = r(1, 6) * (r(0, 1) ? 1 : -1);
+                    const d1 = r(2, 4), d2 = r(3, 5), a = r(1, 4), b = r(-6, 6);
                     q = `\\frac{${fmt(a, "x")}${fmtS(b)}}{${d1}} = \\frac{x}{${d2}}`;
                     val = (-b * d2) / (a * d2 - d1);
                 } else {
-                    const k = r(2, 4), a1 = r(1, 3), b1 = r(1, 5) * (r(0, 1) ? 1 : -1);
+                    const k = r(2, 4), a1 = r(1, 3), b1 = r(-5, 5);
                     const a2 = r(2, 5), b2 = r(1, 10);
                     q = `${k}(${fmt(a1, "x")}${fmtS(b1)}) = ${fmt(a2, "x")}${fmtS(b2)}`;
                     val = (b2 - k * b1) / (k * a1 - a2);
                 }
             } else {
-                const type = r(0, 4);
+                const type = Math.floor(Math.random() * 5);
                 if (type === 0) {
-                    const a = r(2, 10) * (r(0, 1) ? 1 : -1), x = r(-10, 10);
+                    const a = r(-10, 10), x = r(-10, 10);
                     q = `${fmt(a, "x")} = ${a * x}`;
                     val = x;
                 } else if (type === 1) {
@@ -237,11 +255,13 @@
                 } else if (type === 2) {
                     const x = r(-7, 7), a = r(2, 9), c = r(1, a - 1), b = r(-10, 10);
                     const d = (a - c) * x + b;
+                    if(d === 0) return generators.houtei(false);
                     q = `${fmt(a, "x")}${fmtS(b)} = ${fmt(c, "x")}${fmtS(d)}`;
                     val = x;
                 } else if (type === 3) {
                     const k = r(2, 5), x = r(-5, 5), a = r(1, 3), b = r(-5, 5);
                     const right = k * (a * x + b);
+                    if(right === 0) return generators.houtei(false);
                     q = `${k}(${fmt(a, "x")}${fmtS(b)}) = ${right}`;
                     val = x;
                 } else {
@@ -255,22 +275,26 @@
                     }
                 }
             }
-            if (!isFinite(val) || isNaN(val)) return generators.houtei(isBoss);
-            choices = [val, -val, val + 1, val - 1, 0, 1];
-            return { q, val, choices };
+            if (!isFinite(val) || isNaN(val) || val === 0) return generators.houtei(isBoss);
+            return { q, val, choices: [val, -val, val + 1, val - 1, 2, 1] };
         },
         shiki: (isBoss) => {
-            const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-            const rS = () => (Math.random() > 0.5 ? 1 : -1);
-            let type = isBoss ? r(3, 5) : r(0, 3);
+            const r = (min, max) => {
+                let res = 0;
+                while(res === 0) res = Math.floor(Math.random() * (max - min + 1)) + min;
+                return res;
+            };
+            let type = isBoss ? (Math.random() > 0.5 ? 4 : 5) : Math.floor(Math.random() * 4);
             if (type === 0) {
-                const a1 = r(1, 8)*rS(), a2 = r(1, 8)*rS(), b1 = r(1, 8)*rS(), b2 = r(1, 8)*rS();
-                const q = `(${fmt(a1,"x")}${fmtS(b1,"y")}) ${r(0,1)?'+':'-'} (${fmt(a2,"x")}${fmtS(b2,"y")})`;
-                const rx = r(0,1) ? a1+a2 : a1-a2, ry = r(0,1) ? b1+b2 : b1-b2;
-                const aStr = (rx===0 && ry===0) ? "0" : (fmt(rx,"x") + (rx!==0 ? fmtS(ry,"y") : fmt(ry,"y")));
-                return { q, aStr, choices: [aStr, fmt(rx,"x"), fmt(ry,"y"), "0"] };
+                const a1 = r(-8, 8), a2 = r(-8, 8), b1 = r(-8, 8), b2 = r(-8, 8);
+                const op = Math.random() > 0.5 ? '+' : '-';
+                const q = `(${fmt(a1,"x")}${fmtS(b1,"y")}) ${op} (${fmt(a2,"x")}${fmtS(b2,"y")})`;
+                const rx = op === '+' ? a1+a2 : a1-a2, ry = op === '+' ? b1+b2 : b1-b2;
+                if(rx === 0 || ry === 0) return generators.shiki(false);
+                const aStr = fmt(rx,"x") + fmtS(ry,"y");
+                return { q, aStr, choices: [aStr, fmt(rx,"x"), fmt(ry,"y"), "x+y"] };
             } else if (type === 1) {
-                const a = r(2, 7)*rS(), b = r(2, 7);
+                const a = r(-7, 7), b = r(2, 7);
                 const q = `${a}x \\times ${b}y`;
                 return { q, aStr: `${a*b}xy`, choices: [`${a*b}xy`, `${a*b}x`, `${a*b}y`, "xy"] };
             } else if (type === 2) {
@@ -281,7 +305,8 @@
                 const x = r(-3, 3), y = r(-3, 3), k1 = r(2, 4), k2 = r(2, 4);
                 const q = `x=${x}, y=${y} \\text{ のとき } ${k1}x ${fmtS(k2, "y")}`;
                 const val = (k1*x) + (k2*y);
-                return { q, val, choices: [val, val+1, -val, 0] };
+                if(val === 0) return generators.shiki(false);
+                return { q, val, choices: [val, val+1, -val, 1] };
             } else if (type === 4) {
                 const q = `(-3a)^{2} \\times 2b \\div 6ab`;
                 return { q, aStr: "3a", choices: ["3a", "6a", "3b", "a"] };
@@ -311,8 +336,6 @@
 
     function nextQuestion() {
         state.isLocked = false;
-        
-        // 修正：次の問題の際に問題文を再表示する
         document.getElementById('question-text').classList.remove('invisible');
         document.getElementById('guide-text').classList.remove('invisible');
 
@@ -337,8 +360,6 @@
 
     function showChoices() {
         document.getElementById('btn-show-choices').classList.add('hidden');
-        
-        // 修正：不正防止のため問題文を非表示にする
         document.getElementById('question-text').classList.add('invisible');
         document.getElementById('guide-text').classList.add('invisible');
 
@@ -353,22 +374,22 @@
 
         let uniqueList = [];
         let seenDisplay = new Set();
-        const correctVal = (typeof state.currentQ.val === 'number') ? state.currentQ.val : (state.currentQ.aStr || "0");
+        const correctVal = (typeof state.currentQ.val === 'number') ? state.currentQ.val : (state.currentQ.aStr || "1");
         const correctDisplay = getDisplay(correctVal);
         uniqueList.push({ val: correctVal, display: correctDisplay, isCorrect: true });
         seenDisplay.add(correctDisplay);
 
         for (let c of (state.currentQ.choices || [])) {
             const d = getDisplay(c);
-            if (!seenDisplay.has(d) && uniqueList.length < 4) {
+            if (!seenDisplay.has(d) && uniqueList.length < 4 && d !== "0") {
                 uniqueList.push({ val: c, display: d, isCorrect: false });
                 seenDisplay.add(d);
             }
         }
         while (uniqueList.length < 4) {
-            const dummy = (typeof correctVal === 'number') ? Math.floor(Math.random()*40 - 20) : "x+" + Math.floor(Math.random()*10);
+            const dummy = (typeof correctVal === 'number') ? Math.floor(Math.random()*40 - 20) : "x+" + Math.floor(Math.random()*10 + 1);
             const d = getDisplay(dummy);
-            if (!seenDisplay.has(d)) {
+            if (!seenDisplay.has(d) && d !== "0") {
                 uniqueList.push({ val: dummy, display: d, isCorrect: false });
                 seenDisplay.add(d);
             }
@@ -388,8 +409,6 @@
     function checkAnswer(btn, selected, isCorrect) {
         if (state.isLocked) return;
         state.isLocked = true;
-        
-        // 正解確認時は問題文を再度見せる（復習のため）
         document.getElementById('question-text').classList.remove('invisible');
 
         const getDisplay = (v) => {
@@ -403,10 +422,8 @@
             btn.classList.add('correct'); 
             state.combo++; 
             state.correctCount++; 
-            
             const bonus = (state.mode === 'challenge') ? 30 : 15;
             state.timeLeft += bonus;
-            
             document.getElementById('combo').innerText = `${state.combo} COMBO!`;
             document.getElementById('combo').style.display = state.combo > 1 ? 'block' : 'none';
             if (state.combo >= 15) { setTimeout(() => endGame("COMBO GOAL!", true), 600); return; }
